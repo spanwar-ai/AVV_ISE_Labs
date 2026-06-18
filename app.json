@@ -1,0 +1,31 @@
+{
+  "id": "c3c8e2d8-8584-4544-8982-6c62be99cd0f",
+  "name": "PurchaseReceipt",
+  "publisher": "ISE",
+  "brief": "Custom purchase receiving and invoicing with accrual postings.",
+  "description": "Adds a custom receive-accrue-invoice flow for purchase orders, an approval workflow, posting previews, and a bridge to ISE Receiving.",
+  "version": "1.0.0.2",
+  "target": "Cloud",
+  "screenshots": [],
+  "platform": "1.0.0.0",
+  "application": "28.0.0.0",
+    
+  "dependencies": [
+
+  ],
+   "idRanges": [
+    {
+      "from": 50100,
+      "to": 50999
+    }
+  ],
+  "resourceExposurePolicy": {
+    "allowDebugging": true,
+    "allowDownloadingSource": true,
+    "includeSourceInSymbolFile": true
+  },
+"runtime": "17.0",
+  "features": [
+    "NoImplicitWith"
+  ]
+}
