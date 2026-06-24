@@ -68,6 +68,7 @@ page 50121 "BVR Custom Purch Rcpt Lines"
                 field("Qty. to Receive"; Rec."Qty. to Receive")
                 {
                     ApplicationArea = All;
+                    Editable = QtyToReceiveEditable;   //AAV.SP - locked once AP has updated (and after posting)
 
                     trigger OnValidate()
                     var
@@ -105,4 +106,23 @@ page 50121 "BVR Custom Purch Rcpt Lines"
             }
         }
     }
+
+    // Qty. to Receive is editable only before the AP team has updated the accrual
+    // accounts (status Open / Sent to AP Team), and never after posting.   //AAV.SP
+    trigger OnAfterGetRecord()   //AAV.SP
+    begin
+        QtyToReceiveEditable := QtyEditable();   //AAV.SP
+    end;
+
+    local procedure QtyEditable(): Boolean   //AAV.SP
+    var
+        PurchHdr: Record "Purchase Header";   //AAV.SP
+    begin
+        if not PurchHdr.Get(Rec."Document Type", Rec."Document No.") then   //AAV.SP
+            exit(true);                                                     //AAV.SP
+        exit((not PurchHdr."BVR AP Updated") and (not PurchHdr."BVR Custom Rcpt Posted"));   //AAV.SP
+    end;
+
+    var
+        QtyToReceiveEditable: Boolean;   //AAV.SP
 }

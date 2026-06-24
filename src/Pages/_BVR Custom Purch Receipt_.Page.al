@@ -36,6 +36,13 @@ page 50120 "BVR Custom Purch Receipt"
                 {
                     ApplicationArea = All;
                     Editable = false;
+                    Visible = false;   //AAV.SP - hidden; the custom Receipt Status drives the flow
+                }
+                field("BVR Receipt Status"; Rec."BVR Receipt Status")   //AAV.SP
+                {
+                    ApplicationArea = All;
+                    Editable = false;
+                    ToolTip = 'Specifies where the Custom Purchase Receipt is in the approval flow: Open, Sent to AP Team, Pending Approval, Released, or Posted.';
                 }
                 field("Posting Date"; Rec."Posting Date")
                 {
@@ -73,31 +80,37 @@ page 50120 "BVR Custom Purch Receipt"
                 {
                     ApplicationArea = All;
                     Editable = false;
+                    Importance = Additional;   //AAV.SP
                 }
                 field("BVR AP Updated"; Rec."BVR AP Updated")
                 {
                     ApplicationArea = All;
                     Editable = false;
+                    Importance = Additional;   //AAV.SP
                 }
                 field("BVR Sent For Approval"; Rec."BVR Sent For Approval")
                 {
                     ApplicationArea = All;
                     Editable = false;
+                    Importance = Additional;   //AAV.SP
                 }
                 field("BVR Approved"; Rec."BVR Approved")
                 {
                     ApplicationArea = All;
                     Editable = false;
+                    Importance = Additional;   //AAV.SP
                 }
                 field("BVR Custom Rcpt Posted"; Rec."BVR Custom Rcpt Posted")
                 {
                     ApplicationArea = All;
                     Editable = false;
+                    Importance = Additional;   //AAV.SP
                 }
                 field("BVR Posted Rcpt No."; Rec."BVR Posted Rcpt No.")
                 {
                     ApplicationArea = All;
                     Editable = false;
+                    Importance = Additional;   //AAV.SP
                 }
             }
             part(Lines; "BVR Custom Purch Rcpt Lines")
@@ -163,37 +176,37 @@ page 50120 "BVR Custom Purch Receipt"
                 Image = ReOpen;
                 Promoted = true;
                 PromotedCategory = Process;
+                Enabled = not Rec."BVR Custom Rcpt Posted";   //AAV.SP - posted receipts cannot be reopened
 
                 trigger OnAction()
                 var
-                    Reop: Codeunit "Purchase Manual Reopen";
+                    ApprMgt: Codeunit "BVR Cust Rcpt Appr Mgt";   //AAV.SP
                 begin
-                    Reop.Run(Rec);
+                    ApprMgt.ReopenCustomReceipt(Rec);   //AAV.SP - confirms, cancels pending approval, resets status
                     CurrPage.Update(false);
                 end;
             }
             // >>> AAV.SP - OLD approval process (manual boolean flow) commented out.
             //            Replaced by the native workflow approval tab below.  //AAV.SP
 
-            action("Mark AP Updated")
-            {
-                ApplicationArea = All;
-                Caption = 'AP Updated';
-                Image = UpdateDescription;
-                Promoted = true;
-                PromotedCategory = Process;
-                Enabled = (Rec.Status = Rec.Status::Released) and (not Rec."BVR Sent For Approval") and (not Rec."BVR Custom Rcpt Posted");
+            action("Send to AP Team")                                                            //AAV.SP
+            {                                                                                    //AAV.SP
+                ApplicationArea = All;                                                           //AAV.SP
+                Caption = 'Send to AP Team';                                                     //AAV.SP
+                Image = SendTo;                                                                  //AAV.SP
+                Promoted = true;                                                                 //AAV.SP
+                PromotedCategory = Category4;                                                    //AAV.SP
+                Enabled = Rec."BVR Receipt Status" = Rec."BVR Receipt Status"::Open;             //AAV.SP
+                ToolTip = 'Send this Custom Purchase Receipt to the AP team to update the accrual accounts. The AP team is notified by email.'; //AAV.SP
 
-                trigger OnAction()
-                var
-                    Mgt: Codeunit "BVR Receipt Approval Mgt";
-                    H: Record "Purchase Header";
-                begin
-                    H.Get(Rec."Document Type", Rec."No.");
-                    Mgt.MarkAPUpdated(H);
-                    CurrPage.Update(false);
-                end;
-            }
+                trigger OnAction()                                                               //AAV.SP
+                var                                                                              //AAV.SP
+                    ApprMgt: Codeunit "BVR Cust Rcpt Appr Mgt";                                  //AAV.SP
+                begin                                                                            //AAV.SP
+                    ApprMgt.SendToAPTeam(Rec);                                                   //AAV.SP
+                    CurrPage.Update(false);                                                      //AAV.SP
+                end;                                                                             //AAV.SP
+            }                                                                                    //AAV.SP
             /*action("Send for Approval")
             {
                 ApplicationArea = All;
@@ -222,23 +235,21 @@ page 50120 "BVR Custom Purch Receipt"
                 Caption = 'Request Approval';                                                    //AAV.SP
                 Image = SendApprovalRequest;                                                     //AAV.SP
 
-                action(SendApprovalRequest)                                                      //AAV.SP
+                action(SubmitForApproval)                                                        //AAV.SP
                 {                                                                                //AAV.SP
                     ApplicationArea = All;                                                       //AAV.SP
-                    Caption = 'Send A&pproval Request';                                          //AAV.SP
+                    Caption = 'Send for Approval';                                               //AAV.SP
                     Image = SendApprovalRequest;                                                 //AAV.SP
                     Promoted = true;                                                             //AAV.SP
                     PromotedCategory = Category4;                                                 //AAV.SP
-                    Enabled = not OpenApprovalEntriesExist;                                       //AAV.SP
-                    ToolTip = 'Send the Custom Purchase Receipt for approval through the native workflow.'; //AAV.SP
+                    Enabled = (Rec."BVR Receipt Status" = Rec."BVR Receipt Status"::"Sent to AP Team") and IsAPTeamUser and (not OpenApprovalEntriesExist); //AAV.SP
+                    ToolTip = 'Confirm the accrual accounts are updated and submit the Custom Purchase Receipt for approval. AP team only.'; //AAV.SP
 
                     trigger OnAction()                                                           //AAV.SP
                     var                                                                          //AAV.SP
                         ApprMgt: Codeunit "BVR Cust Rcpt Appr Mgt";                              //AAV.SP
-                        ApprEvents: Codeunit "BVR Cust Rcpt Appr Events";                        //AAV.SP
                     begin                                                                        //AAV.SP
-                        ApprMgt.CheckCustomReceiptApprovalsWorkflowEnabled(Rec);                 //AAV.SP
-                        ApprEvents.OnSendCustomReceiptForApproval(Rec);                          //AAV.SP
+                        ApprMgt.MarkAPUpdatedAndSubmit(Rec);                                     //AAV.SP
                         CurrPage.Update(false);                                                  //AAV.SP
                     end;                                                                         //AAV.SP
                 }                                                                                //AAV.SP
@@ -335,24 +346,7 @@ page 50120 "BVR Custom Purch Receipt"
                     end;                                                                         //AAV.SP
                 }                                                                                //AAV.SP
             }                                                                                    //AAV.SP
-            action("AP Updated")                                                                 //AAV.SP
-            {                                                                                    //AAV.SP
-                ApplicationArea = All;                                                           //AAV.SP
-                Caption = 'AP Updated';                                                          //AAV.SP
-                Image = UpdateDescription;                                                       //AAV.SP
-                Promoted = true;                                                                 //AAV.SP
-                PromotedCategory = Category4;                                                    //AAV.SP
-                Enabled = Rec."BVR Approved" and (not Rec."BVR AP Updated") and (not Rec."BVR Custom Rcpt Posted"); //AAV.SP
-                ToolTip = 'Confirm the accrual accounts have been updated in AP. Locks the accrual accounts for everyone except the AP team.'; //AAV.SP
-
-                trigger OnAction()                                                               //AAV.SP
-                var                                                                              //AAV.SP
-                    ApprMgt: Codeunit "BVR Cust Rcpt Appr Mgt";                                  //AAV.SP
-                begin                                                                            //AAV.SP
-                    ApprMgt.MarkAPUpdated(Rec);                                                  //AAV.SP
-                    CurrPage.Update(false);                                                      //AAV.SP
-                end;                                                                             //AAV.SP
-            }                                                                                    //AAV.SP
+            // AP Updated is now merged into "AP Updated & Submit for Approval" above.   //AAV.SP
             // <<< AAV.SP - end of native workflow approval
             action("Preview Posting")
             {
@@ -372,6 +366,26 @@ page 50120 "BVR Custom Purch Receipt"
                     Prev.PreviewCustomReceiptSafeV2(H);
                 end;
             }
+            action("Post Receipt")                                                               //AAV.SP
+            {                                                                                    //AAV.SP
+                ApplicationArea = All;                                                           //AAV.SP
+                Caption = 'Post Receipt';                                                        //AAV.SP
+                Image = Post;                                                                    //AAV.SP
+                Promoted = true;                                                                 //AAV.SP
+                PromotedCategory = Process;                                                      //AAV.SP
+                // Only the approved-and-released receipt can be posted, and only once.   //AAV.SP
+                Enabled = (Rec."BVR Receipt Status" = Rec."BVR Receipt Status"::Released) and (not Rec."BVR Custom Rcpt Posted");   //AAV.SP
+
+                trigger OnAction()                                                               //AAV.SP
+                var                                                                              //AAV.SP
+                    PostV2: Codeunit "BVR Custom Rcpt Post V2";                                  //AAV.SP
+                    H: Record "Purchase Header";                                                 //AAV.SP
+                begin                                                                            //AAV.SP
+                    H.Get(Rec."Document Type", Rec."No.");                                       //AAV.SP
+                    PostV2.Post(H);                                                              //AAV.SP
+                    CurrPage.Update(false);                                                      //AAV.SP
+                end;                                                                             //AAV.SP
+            }                                                                                    //AAV.SP
             action("Approval Queue")
             {
                 ApplicationArea = All;
@@ -457,10 +471,12 @@ page 50120 "BVR Custom Purch Receipt"
         OpenApprovalEntriesExist := ApprMgt.HasOpenApprovalEntries(Rec.RecordId);
         OpenApprovalEntriesExistForCurrUser := ApprMgt.HasOpenApprovalEntriesForCurrentUser(Rec.RecordId);
         AccrualAcctEditable := ApprMgt.AccrualAccountsEditable(Rec);   //AAV.SP
+        IsAPTeamUser := ApprMgt.IsAPTeam();   //AAV.SP
     end;
 
     var
         OpenApprovalEntriesExist: Boolean;
         OpenApprovalEntriesExistForCurrUser: Boolean;
         AccrualAcctEditable: Boolean;   //AAV.SP
+        IsAPTeamUser: Boolean;   //AAV.SP
 }

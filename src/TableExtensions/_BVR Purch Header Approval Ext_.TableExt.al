@@ -24,5 +24,13 @@ tableextension 50210 "BVR Purch Header Approval Ext" extends "Purchase Header"
             Caption = 'Requires Approval';
             DataClassification = CustomerContent;
         }
+        // Single user-facing status for the custom receipt approval flow. Kept in
+        // sync with the booleans above by codeunit "BVR Cust Rcpt Appr Mgt".   //AAV.SP
+        field(50205; "BVR Receipt Status"; Enum "BVR Receipt Status")   //AAV.SP
+        {
+            Caption = 'Receipt Status';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
     }
 }

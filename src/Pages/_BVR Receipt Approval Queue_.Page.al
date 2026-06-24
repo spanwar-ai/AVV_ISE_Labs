@@ -34,6 +34,10 @@ page 50230 "BVR Receipt Approval Queue"
                 {
                     ApplicationArea = All;
                 }
+                field("BVR Receipt Status"; Rec."BVR Receipt Status")   //AAV.SP
+                {
+                    ApplicationArea = All;
+                }
                 field("BVR AP Updated"; Rec."BVR AP Updated")
                 {
                     ApplicationArea = All;

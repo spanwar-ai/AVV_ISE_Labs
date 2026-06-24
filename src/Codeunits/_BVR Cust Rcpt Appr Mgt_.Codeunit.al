@@ -73,6 +73,27 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
     end;
 
     // ---------------------------------------------------------------------
+    // Drive the custom status to Released when the document is released by the
+    // approval engine. This is workflow-agnostic: it fires whether the enabled
+    // workflow uses our custom response or a standard purchase-approval release,
+    // so the custom status never lags behind the standard Status.   //AAV.SP
+    // ---------------------------------------------------------------------
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Release Purchase Document", 'OnAfterReleasePurchaseDoc', '', false, false)]
+    local procedure OnAfterReleaseSetCustomStatusReleased(var PurchaseHeader: Record "Purchase Header")
+    begin
+        if not IsCustomReceipt(PurchaseHeader) then
+            exit;
+        // Only promote from the approval stage — never from a manual release at Open.
+        if PurchaseHeader."BVR Receipt Status" <> PurchaseHeader."BVR Receipt Status"::"Pending Approval" then
+            exit;
+
+        PurchaseHeader."BVR Approved" := true;
+        PurchaseHeader."BVR Sent For Approval" := true;
+        PurchaseHeader."BVR Receipt Status" := PurchaseHeader."BVR Receipt Status"::Released;
+        PurchaseHeader.Modify(true);
+    end;
+
+    // ---------------------------------------------------------------------
     // Reset our flags when the request is rejected or cancelled
     // ---------------------------------------------------------------------
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Approvals Mgmt.", 'OnRejectApprovalRequest', '', false, false)]
@@ -102,6 +123,9 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
 
         PurchaseHeader."BVR Approved" := false;
         PurchaseHeader."BVR Sent For Approval" := false;
+        // Drop back to the AP-team stage so the AP work isn't lost on reject/cancel.   //AAV.SP
+        if PurchaseHeader."BVR Receipt Status" = PurchaseHeader."BVR Receipt Status"::"Pending Approval" then   //AAV.SP
+            PurchaseHeader."BVR Receipt Status" := PurchaseHeader."BVR Receipt Status"::"Sent to AP Team";       //AAV.SP
         PurchaseHeader.Modify(true);
     end;
 
@@ -123,15 +147,125 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
     end;
 
     // ---------------------------------------------------------------------
-    // AP-team stage — only available after the receipt is approved.   //AAV.SP
+    // Stage 1 — creator sends the receipt to the AP team to update the accrual
+    // accounts, and the AP team is notified by email.   //AAV.SP
     // ---------------------------------------------------------------------
+    procedure SendToAPTeam(var PurchaseHeader: Record "Purchase Header")   //AAV.SP
+    begin
+        PurchaseHeader.TestField("Document Type", PurchaseHeader."Document Type"::Order);   //AAV.SP
+        PurchaseHeader.TestField("BVR Receive PO", true);                                   //AAV.SP
+        PurchaseHeader.TestField("BVR Requires Approval", true);                            //AAV.SP
+        PurchaseHeader.TestField("BVR Receipt Status", PurchaseHeader."BVR Receipt Status"::Open);   //AAV.SP
+        PurchaseHeader."BVR Receipt Status" := PurchaseHeader."BVR Receipt Status"::"Sent to AP Team";   //AAV.SP
+        PurchaseHeader.Modify(true);                                                        //AAV.SP
+        // The status change must stand even if the mail fails. A try function catches
+        // the email error (and rolls back only the outbox write), so we can warn the
+        // user to notify the AP team manually instead of aborting the whole step.   //AAV.SP
+        if not TryNotifyAPTeam(PurchaseHeader) then                                         //AAV.SP
+            Message(NotificationFailedMsg, PurchaseHeader."No.", GetLastErrorText());       //AAV.SP
+    end;
+
+    // Stage 2 — an AP-team user confirms the accrual accounts are updated and submits
+    // the receipt to the approval workflow in one step.   //AAV.SP
+    procedure MarkAPUpdatedAndSubmit(var PurchaseHeader: Record "Purchase Header")   //AAV.SP
+    var
+        CustRcptApprEvents: Codeunit "BVR Cust Rcpt Appr Events";   //AAV.SP
+    begin
+        PurchaseHeader.TestField("Document Type", PurchaseHeader."Document Type"::Order);   //AAV.SP
+        PurchaseHeader.TestField("BVR Receive PO", true);                                   //AAV.SP
+        PurchaseHeader.TestField("BVR Receipt Status", PurchaseHeader."BVR Receipt Status"::"Sent to AP Team");   //AAV.SP
+        if not IsAPTeam() then                                                              //AAV.SP
+            Error(APTeamOnlyErr);                                                           //AAV.SP
+        // Both accrual accounts are mandatory before the receipt can go for approval.   //AAV.SP
+        PurchaseHeader.TestField("BVR Vendor Accrual Acc No.");                             //AAV.SP
+        PurchaseHeader.TestField("BVR Expense Accrual Acc No.");                            //AAV.SP
+        CheckCustomReceiptApprovalsWorkflowEnabled(PurchaseHeader);                         //AAV.SP
+
+        PurchaseHeader."BVR AP Updated" := true;                                            //AAV.SP
+        PurchaseHeader."BVR Sent For Approval" := true;                                     //AAV.SP - keep the old boolean in sync
+        PurchaseHeader."BVR Approved" := false;                                             //AAV.SP
+        PurchaseHeader."BVR Receipt Status" := PurchaseHeader."BVR Receipt Status"::"Pending Approval";   //AAV.SP
+        PurchaseHeader.Modify(true);                                                        //AAV.SP
+
+        // Hand off to the native workflow (creates approval entries, sends requests).   //AAV.SP
+        CustRcptApprEvents.OnSendCustomReceiptForApproval(PurchaseHeader);                  //AAV.SP
+    end;
+
+    // Reopen — cancels any pending approval and resets the custom status flow back to
+    // Open after a confirmation. Mirrors the standard "reopen" but for our status.   //AAV.SP
+    procedure ReopenCustomReceipt(var PurchaseHeader: Record "Purchase Header")   //AAV.SP
+    var
+        CustRcptApprEvents: Codeunit "BVR Cust Rcpt Appr Events";   //AAV.SP
+        ReopenCU: Codeunit "Purchase Manual Reopen";                //AAV.SP
+    begin
+        PurchaseHeader.TestField("Document Type", PurchaseHeader."Document Type"::Order);   //AAV.SP
+        PurchaseHeader.TestField("BVR Receive PO", true);                                   //AAV.SP
+        if PurchaseHeader."BVR Custom Rcpt Posted" then                                     //AAV.SP
+            Error(CannotReopenPostedErr, PurchaseHeader."No.");                             //AAV.SP
+
+        // Nothing to do if already fully Open.   //AAV.SP
+        if (PurchaseHeader."BVR Receipt Status" = PurchaseHeader."BVR Receipt Status"::Open)   //AAV.SP
+            and (PurchaseHeader.Status = PurchaseHeader.Status::Open) then begin               //AAV.SP
+            Message(AlreadyOpenMsg, PurchaseHeader."No.");                                  //AAV.SP
+            exit;                                                                           //AAV.SP
+        end;
+
+        if not Confirm(ConfirmReopenQst, false, PurchaseHeader."No.") then                  //AAV.SP
+            exit;                                                                           //AAV.SP
+
+        // Cancel any open approval request first (resets the standard status to Open).   //AAV.SP
+        if HasOpenApprovalEntries(PurchaseHeader.RecordId) then begin                       //AAV.SP
+            CustRcptApprEvents.OnCancelCustomReceiptApprovalRequest(PurchaseHeader);        //AAV.SP
+            PurchaseHeader.Get(PurchaseHeader."Document Type", PurchaseHeader."No.");       //AAV.SP
+        end;
+
+        // Reset the custom status flow completely.   //AAV.SP
+        PurchaseHeader."BVR Receipt Status" := PurchaseHeader."BVR Receipt Status"::Open;   //AAV.SP
+        PurchaseHeader."BVR Approved" := false;                                             //AAV.SP
+        PurchaseHeader."BVR Sent For Approval" := false;                                    //AAV.SP
+        PurchaseHeader."BVR AP Updated" := false;                                           //AAV.SP
+        PurchaseHeader.Modify(true);                                                        //AAV.SP
+
+        // Reopen the underlying purchase document if it is still Released.   //AAV.SP
+        if PurchaseHeader.Status <> PurchaseHeader.Status::Open then                        //AAV.SP
+            ReopenCU.Run(PurchaseHeader);                                                   //AAV.SP
+
+        Message(ReopenedMsg, PurchaseHeader."No.");                                         //AAV.SP
+    end;
+
+    // Legacy single-step mark (kept for the old boolean flow / batch pages).   //AAV.SP
     procedure MarkAPUpdated(var PurchaseHeader: Record "Purchase Header")   //AAV.SP
     begin
         PurchaseHeader.TestField("Document Type", PurchaseHeader."Document Type"::Order);   //AAV.SP
         PurchaseHeader.TestField("BVR Receive PO", true);                                   //AAV.SP
-        PurchaseHeader.TestField("BVR Approved", true);                                     //AAV.SP
         PurchaseHeader."BVR AP Updated" := true;                                            //AAV.SP
         PurchaseHeader.Modify(true);                                                        //AAV.SP
+    end;
+
+    // Email the AP team that a receipt is waiting for accrual-account updates.
+    // Try function: any failure (no AP email configured, no email account, send error)
+    // is returned as false to the caller instead of aborting the status change.   //AAV.SP
+    [TryFunction]
+    local procedure TryNotifyAPTeam(var PurchaseHeader: Record "Purchase Header")   //AAV.SP
+    var
+        PurchSetup: Record "Purchases & Payables Setup";   //AAV.SP
+        EmailMessage: Codeunit "Email Message";            //AAV.SP
+        Email: Codeunit "Email";                           //AAV.SP
+        Recipients: List of [Text];                        //AAV.SP
+        Address: Text;                                     //AAV.SP
+    begin
+        PurchSetup.Get();                                                                   //AAV.SP
+        PurchSetup.TestField("BVR AP Team Email");                                          //AAV.SP
+        foreach Address in PurchSetup."BVR AP Team Email".Split(';') do                     //AAV.SP
+            if Address.Trim() <> '' then                                                    //AAV.SP
+                Recipients.Add(Address.Trim());                                             //AAV.SP
+
+        EmailMessage.Create(                                                                //AAV.SP
+            Recipients,                                                                     //AAV.SP
+            StrSubstNo(APMailSubjectTxt, PurchaseHeader."No."),                             //AAV.SP
+            StrSubstNo(APMailBodyTxt, PurchaseHeader."No.", PurchaseHeader."Buy-from Vendor No.", PurchaseHeader."Buy-from Vendor Name"), //AAV.SP
+            false);                                                                         //AAV.SP
+        Email.Enqueue(EmailMessage);                                                        //AAV.SP
     end;
 
     // True when the current user is flagged as AP team on User Setup. Such users
@@ -145,13 +279,14 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
         exit(UserSetup."BVR AP Team");         //AAV.SP
     end;
 
-    // True when the accrual accounts may be edited: freely before "AP Updated",
-    // and only by AP-team users afterwards.   //AAV.SP
+    // True when the accrual accounts may be edited. In the status flow the accruals
+    // are the AP team's job: editable only while the receipt sits at "Sent to AP Team"
+    // and only by an AP-team user (never once posted).   //AAV.SP
     procedure AccrualAccountsEditable(var PurchaseHeader: Record "Purchase Header"): Boolean   //AAV.SP
     begin
         if PurchaseHeader."BVR Custom Rcpt Posted" then   //AAV.SP
             exit(false);                                  //AAV.SP
-        exit((not PurchaseHeader."BVR AP Updated") or IsAPTeam());   //AAV.SP
+        exit((PurchaseHeader."BVR Receipt Status" = PurchaseHeader."BVR Receipt Status"::"Sent to AP Team") and IsAPTeam());   //AAV.SP
     end;
 
     // ---------------------------------------------------------------------
@@ -178,4 +313,12 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
 
     var
         NoWorkflowEnabledErr: Label 'No approval workflow is enabled for Custom Purchase Receipts. Enable the "Custom Receipt Approval Workflow" first.';
+        APTeamOnlyErr: Label 'Only AP-team users can update the accrual accounts and submit the receipt for approval.';   //AAV.SP
+        APMailSubjectTxt: Label 'Custom Receipt %1 awaiting AP accrual update', Comment = '%1 = Custom Receipt No.';   //AAV.SP
+        APMailBodyTxt: Label 'Custom Purchase Receipt %1 (Vendor %2 - %3) has been sent to the AP team to update the accrual accounts. Please update the Vendor and Expense accrual accounts, then submit it for approval.', Comment = '%1 = Receipt No., %2 = Vendor No., %3 = Vendor Name';   //AAV.SP
+        NotificationFailedMsg: Label 'Receipt %1 was sent to the AP team, but the email notification could NOT be sent. Please inform the AP team manually.\\Details: %2', Comment = '%1 = Receipt No., %2 = error details';   //AAV.SP
+        ConfirmReopenQst: Label 'Reopen Custom Receipt %1?\\This cancels any pending approval and resets the status back to Open.', Comment = '%1 = Receipt No.';   //AAV.SP
+        ReopenedMsg: Label 'Custom Receipt %1 has been reopened and its status reset to Open.', Comment = '%1 = Receipt No.';   //AAV.SP
+        AlreadyOpenMsg: Label 'Custom Receipt %1 is already open.', Comment = '%1 = Receipt No.';   //AAV.SP
+        CannotReopenPostedErr: Label 'Custom Receipt %1 has already been posted and cannot be reopened.', Comment = '%1 = Receipt No.';   //AAV.SP
 }

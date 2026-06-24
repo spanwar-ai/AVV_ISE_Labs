@@ -43,6 +43,7 @@ codeunit 50243 "BVR Cust Rcpt Appr Resp"
 
         PurchaseHeader."BVR Approved" := true;
         PurchaseHeader."BVR Sent For Approval" := true;
+        PurchaseHeader."BVR Receipt Status" := PurchaseHeader."BVR Receipt Status"::Released;   //AAV.SP
         PurchaseHeader.Modify(true);
         ResponseExecuted := true;
     end;

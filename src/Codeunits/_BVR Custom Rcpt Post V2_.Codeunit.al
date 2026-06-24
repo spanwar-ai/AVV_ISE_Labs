@@ -159,6 +159,7 @@ codeunit 50123 "BVR Custom Rcpt Post V2"
         if LinesPosted = 0 then Error('Nothing to post. Enter Qty. to Receive and check Cost on at least one line.');
         PurchHdr."BVR Custom Rcpt Posted":=true;
         PurchHdr."BVR Posted Rcpt No.":=RcptHdr."No.";
+        PurchHdr."BVR Receipt Status":=PurchHdr."BVR Receipt Status"::Posted;   //AAV.SP
         PurchHdr.Modify(true);
         Message('Custom Receipt posted (SAFE V2). Posted Receipt No.: %1', RcptHdr."No.");
     end;
