@@ -89,6 +89,8 @@ codeunit 50123 "BVR Custom Rcpt Post V2"
                 AmountLCY:=Round(PurchLine."Direct Unit Cost" * QtyToReceive, 0.01);
                 TotalAccrualAmt+=AmountLCY;
                 if QtyToReceive <> 0 then If TotalAccrualAmt = 0 then error('Check amount for the lines');
+                // Assign the receipt line no. up front so the item entry can be linked to it.   //AAV.SP
+                LineNo += 10000;
                 if PurchLine.Type = PurchLine.Type::Item then begin
                     ItemRec.Get(PurchLine."No.");
                     if ItemRec.Type = ItemRec.Type::Inventory then begin
@@ -97,7 +99,11 @@ codeunit 50123 "BVR Custom Rcpt Post V2"
                         ItemJnlLine.Validate("Journal Template Name", 'ITEM');
                         ItemJnlLine.Validate("Journal Batch Name", 'DEFAULT');
                         ItemJnlLine.Validate("Entry Type", ItemJnlLine."Entry Type"::Purchase);
-                        ItemJnlLine.Validate("Document No.", PurchHdr."No.");
+                        // Link the item entry to the POSTED RECEIPT so the standard
+                        // Undo Receipt can find and reverse it.   //AAV.SP
+                        ItemJnlLine.Validate("Document No.", RcptHdr."No.");
+                        ItemJnlLine."Document Type" := ItemJnlLine."Document Type"::"Purchase Receipt";
+                        ItemJnlLine."Document Line No." := LineNo;
                         ItemJnlLine.Validate("Posting Date", PurchHdr."Posting Date");
                         ItemJnlLine.Validate("Item No.", ItemRec."No.");
                         ItemJnlLine.Validate(Quantity, QtyToReceive);
@@ -109,7 +115,6 @@ codeunit 50123 "BVR Custom Rcpt Post V2"
                         ItemJnlPostLine.RunWithCheck(ItemJnlLine);
                     end;
                 end;
-                LineNo+=10000;
                 RcptLine.Init();
                 RcptLine."Document No.":=RcptHdr."No.";
                 RcptLine."Line No.":=LineNo;

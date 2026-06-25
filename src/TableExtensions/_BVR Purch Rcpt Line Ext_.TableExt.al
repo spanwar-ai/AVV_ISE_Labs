@@ -34,5 +34,13 @@ tableextension 50116 "BVR Purch Rcpt Line Ext" extends "Purch. Rcpt. Line"
             Caption = 'Source PO Line No.';
             DataClassification = CustomerContent;
         }
+        // Set once the custom accrual G/L entry for this line has been reversed by an
+        // Undo Receipt, so the reversal can never be posted twice.   //AAV.SP
+        field(50205; "BVR Accrual Reversed"; Boolean)   //AAV.SP
+        {
+            Caption = 'Accrual Reversed';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
     }
 }
