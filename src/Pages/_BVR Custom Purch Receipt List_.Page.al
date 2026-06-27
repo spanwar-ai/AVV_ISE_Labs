@@ -5,7 +5,7 @@ page 50123 "BVR Custom Purch Receipt List"
     Caption = 'Custom Purchase Receipts (POs)';
     ApplicationArea = All;
     UsageCategory = Lists;
-    SourceTableView = where("Document Type"=const(Order), "BVR Receive PO"=const(true));
+    SourceTableView = where("Document Type" = const(Order), "BVR Receive PO" = const(true));
     CardPageId = "BVR Custom Purch Receipt";
     Editable = false;
     InsertAllowed = false;
@@ -39,6 +39,14 @@ page 50123 "BVR Custom Purch Receipt List"
                     ApplicationArea = All;
                 }
                 field("BVR Posted Rcpt No."; Rec."BVR Posted Rcpt No.")
+                {
+                    ApplicationArea = All;
+                }
+                field("BVR Receipt Status"; Rec."BVR Receipt Status")
+                {
+                    ApplicationArea = All;
+                }
+                field("Posting No."; Rec."Posting No.")
                 {
                     ApplicationArea = All;
                 }

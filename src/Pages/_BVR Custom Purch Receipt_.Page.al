@@ -76,30 +76,30 @@ page 50120 "BVR Custom Purch Receipt"
                     Editable = false;
                 }
                 // Approval booleans
-                field("BVR Requires Approval"; Rec."BVR Requires Approval")
-                {
-                    ApplicationArea = All;
-                    Editable = false;
-                    Importance = Additional;   //AAV.SP
-                }
-                field("BVR AP Updated"; Rec."BVR AP Updated")
-                {
-                    ApplicationArea = All;
-                    Editable = false;
-                    Importance = Additional;   //AAV.SP
-                }
-                field("BVR Sent For Approval"; Rec."BVR Sent For Approval")
-                {
-                    ApplicationArea = All;
-                    Editable = false;
-                    Importance = Additional;   //AAV.SP
-                }
-                field("BVR Approved"; Rec."BVR Approved")
-                {
-                    ApplicationArea = All;
-                    Editable = false;
-                    Importance = Additional;   //AAV.SP
-                }
+                // field("BVR Requires Approval"; Rec."BVR Requires Approval")
+                // {
+                //     ApplicationArea = All;
+                //     Editable = false;
+                //     Importance = Additional;   //AAV.SP
+                // }
+                // field("BVR AP Updated"; Rec."BVR AP Updated")
+                // {
+                //     ApplicationArea = All;
+                //     Editable = false;
+                //     Importance = Additional;   //AAV.SP
+                // }
+                // field("BVR Sent For Approval"; Rec."BVR Sent For Approval")
+                // {
+                //     ApplicationArea = All;
+                //     Editable = false;
+                //     Importance = Additional;   //AAV.SP
+                // }
+                // field("BVR Approved"; Rec."BVR Approved")
+                // {
+                //     ApplicationArea = All;
+                //     Editable = false;
+                //     Importance = Additional;   //AAV.SP
+                // }
                 field("BVR Custom Rcpt Posted"; Rec."BVR Custom Rcpt Posted")
                 {
                     ApplicationArea = All;
@@ -195,7 +195,7 @@ page 50120 "BVR Custom Purch Receipt"
                 Caption = 'Send to AP Team';                                                     //AAV.SP
                 Image = SendTo;                                                                  //AAV.SP
                 Promoted = true;                                                                 //AAV.SP
-                PromotedCategory = Category4;                                                    //AAV.SP
+                PromotedCategory = Process;                                                    //AAV.SP
                 Enabled = Rec."BVR Receipt Status" = Rec."BVR Receipt Status"::Open;             //AAV.SP
                 ToolTip = 'Send this Custom Purchase Receipt to the AP team to update the accrual accounts. The AP team is notified by email.'; //AAV.SP
 

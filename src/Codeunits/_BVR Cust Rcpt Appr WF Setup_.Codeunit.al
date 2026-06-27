@@ -87,6 +87,7 @@ codeunit 50245 "BVR Cust Rcpt Appr WF Setup"
         CreateApprovalStepID: Integer;
         SendApprovalStepID: Integer;
         ApproveEventStepID: Integer;
+        SetApprovedStepID: Integer;   //AAV.SP
         RejectEventStepID: Integer;
         RejectResponseStepID: Integer;
         CancelEventStepID: Integer;
@@ -109,9 +110,10 @@ codeunit 50245 "BVR Cust Rcpt Appr WF Setup"
         WorkflowSetup.InsertResponseStep(Workflow, WorkflowResponseHandling.SetStatusToPendingApprovalCode(), CreateApprovalStepID);
         SendApprovalStepID := WorkflowSetup.InsertResponseStep(Workflow, WorkflowResponseHandling.SendApprovalRequestForApprovalCode(), CreateApprovalStepID);
 
-        // On approve -> mark the custom receipt approved (lights up "Post Receipt").
+        // On approve -> mark the custom receipt approved, then auto-post it.   //AAV.SP
         ApproveEventStepID := WorkflowSetup.InsertEventStep(Workflow, WorkflowEventHandling.RunWorkflowOnApproveApprovalRequestCode(), SendApprovalStepID);
-        WorkflowSetup.InsertResponseStep(Workflow, CustRcptApprResp.SetCustomReceiptApprovedCode(), ApproveEventStepID);
+        SetApprovedStepID := WorkflowSetup.InsertResponseStep(Workflow, CustRcptApprResp.SetCustomReceiptApprovedCode(), ApproveEventStepID);
+        WorkflowSetup.InsertResponseStep(Workflow, CustRcptApprResp.PostCustomReceiptCode(), SetApprovedStepID);
 
         // On reject -> reject all requests + reopen the document.
         RejectEventStepID := WorkflowSetup.InsertEventStep(Workflow, WorkflowEventHandling.RunWorkflowOnRejectApprovalRequestCode(), SendApprovalStepID);

@@ -248,10 +248,68 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
     [TryFunction]
     local procedure TryNotifyAPTeam(var PurchaseHeader: Record "Purchase Header")   //AAV.SP
     var
-        PurchSetup: Record "Purchases & Payables Setup";   //AAV.SP
         EmailMessage: Codeunit "Email Message";            //AAV.SP
         Email: Codeunit "Email";                           //AAV.SP
         Recipients: List of [Text];                        //AAV.SP
+    begin
+        GetAPRecipients(Recipients);                                                        //AAV.SP
+        EmailMessage.Create(                                                                //AAV.SP
+            Recipients,                                                                     //AAV.SP
+            StrSubstNo(APMailSubjectTxt, PurchaseHeader."No."),                             //AAV.SP
+            StrSubstNo(APMailBodyTxt, PurchaseHeader."No.", PurchaseHeader."Buy-from Vendor No.", PurchaseHeader."Buy-from Vendor Name"), //AAV.SP
+            false);                                                                         //AAV.SP
+        Email.Enqueue(EmailMessage);                                                        //AAV.SP
+    end;
+
+    // Notify the AP team that a custom receipt has been POSTED, with posting details.
+    // Try-wrapped so a mail failure never rolls back the posting.   //AAV.SP
+    procedure NotifyAPTeamReceiptPosted(PostedReceiptNo: Code[20])   //AAV.SP
+    begin
+        if not TryNotifyAPTeamPosted(PostedReceiptNo) then                                  //AAV.SP
+            Message(PostNotificationFailedMsg, PostedReceiptNo, GetLastErrorText());        //AAV.SP
+    end;
+
+    [TryFunction]
+    local procedure TryNotifyAPTeamPosted(PostedReceiptNo: Code[20])   //AAV.SP
+    var
+        RcptHdr: Record "Purch. Rcpt. Header";             //AAV.SP
+        RcptLine: Record "Purch. Rcpt. Line";              //AAV.SP
+        EmailMessage: Codeunit "Email Message";            //AAV.SP
+        Email: Codeunit "Email";                           //AAV.SP
+        Recipients: List of [Text];                        //AAV.SP
+        TotalAccrued: Decimal;                             //AAV.SP
+    begin
+        RcptHdr.Get(PostedReceiptNo);                                                       //AAV.SP
+
+        RcptLine.SetRange("Document No.", PostedReceiptNo);                                 //AAV.SP
+        RcptLine.SetRange("BVR Custom Receipt", true);                                      //AAV.SP
+        if RcptLine.FindSet() then                                                          //AAV.SP
+            repeat                                                                          //AAV.SP
+                TotalAccrued += RcptLine."BVR Accrued Amount";                              //AAV.SP
+            until RcptLine.Next() = 0;                                                       //AAV.SP
+
+        GetAPRecipients(Recipients);                                                        //AAV.SP
+        EmailMessage.Create(                                                                //AAV.SP
+            Recipients,                                                                     //AAV.SP
+            StrSubstNo(APPostedSubjectTxt, RcptHdr."No."),                                  //AAV.SP
+            StrSubstNo(                                                                     //AAV.SP
+                APPostedBodyTxt,                                                            //AAV.SP
+                RcptHdr."No.",                                                              //AAV.SP
+                RcptHdr."Order No.",                                                        //AAV.SP
+                RcptHdr."Buy-from Vendor No.",                                              //AAV.SP
+                RcptHdr."Buy-from Vendor Name",                                             //AAV.SP
+                Format(RcptHdr."Posting Date"),                                             //AAV.SP
+                Format(TotalAccrued, 0, '<Precision,2:2><Standard Format,0>'),              //AAV.SP
+                RcptHdr."BVR Expense Accrual Acc No.",                                       //AAV.SP
+                RcptHdr."BVR Vendor Accrual Acc No."),                                       //AAV.SP
+            true);                                                                          //AAV.SP
+        Email.Enqueue(EmailMessage);                                                        //AAV.SP
+    end;
+
+    // Shared recipient list from the AP Team Email on Purchases & Payables Setup.   //AAV.SP
+    local procedure GetAPRecipients(var Recipients: List of [Text])   //AAV.SP
+    var
+        PurchSetup: Record "Purchases & Payables Setup";   //AAV.SP
         Address: Text;                                     //AAV.SP
     begin
         PurchSetup.Get();                                                                   //AAV.SP
@@ -259,13 +317,6 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
         foreach Address in PurchSetup."BVR AP Team Email".Split(';') do                     //AAV.SP
             if Address.Trim() <> '' then                                                    //AAV.SP
                 Recipients.Add(Address.Trim());                                             //AAV.SP
-
-        EmailMessage.Create(                                                                //AAV.SP
-            Recipients,                                                                     //AAV.SP
-            StrSubstNo(APMailSubjectTxt, PurchaseHeader."No."),                             //AAV.SP
-            StrSubstNo(APMailBodyTxt, PurchaseHeader."No.", PurchaseHeader."Buy-from Vendor No.", PurchaseHeader."Buy-from Vendor Name"), //AAV.SP
-            false);                                                                         //AAV.SP
-        Email.Enqueue(EmailMessage);                                                        //AAV.SP
     end;
 
     // True when the current user is flagged as AP team on User Setup. Such users
@@ -317,6 +368,9 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
         APMailSubjectTxt: Label 'Custom Receipt %1 awaiting AP accrual update', Comment = '%1 = Custom Receipt No.';   //AAV.SP
         APMailBodyTxt: Label 'Custom Purchase Receipt %1 (Vendor %2 - %3) has been sent to the AP team to update the accrual accounts. Please update the Vendor and Expense accrual accounts, then submit it for approval.', Comment = '%1 = Receipt No., %2 = Vendor No., %3 = Vendor Name';   //AAV.SP
         NotificationFailedMsg: Label 'Receipt %1 was sent to the AP team, but the email notification could NOT be sent. Please inform the AP team manually.\\Details: %2', Comment = '%1 = Receipt No., %2 = error details';   //AAV.SP
+        APPostedSubjectTxt: Label 'Custom Receipt %1 posted', Comment = '%1 = Posted Receipt No.';   //AAV.SP
+        APPostedBodyTxt: Label 'Custom Purchase Receipt <b>%1</b> (Order %2) has been posted.<br>Vendor: %3 - %4<br>Posting Date: %5<br>Total Accrued Amount: %6<br>Expense Accrual Account: %7<br>Vendor Accrual Account: %8', Comment = '%1=Receipt No,%2=Order No,%3=Vendor No,%4=Vendor Name,%5=Posting Date,%6=Total Accrued,%7=Expense Acc,%8=Vendor Acc';   //AAV.SP
+        PostNotificationFailedMsg: Label 'Custom Receipt %1 was posted, but the AP posting notification could NOT be sent. Please inform the AP team manually.\\Details: %2', Comment = '%1 = Receipt No., %2 = error details';   //AAV.SP
         ConfirmReopenQst: Label 'Reopen Custom Receipt %1?\\This cancels any pending approval and resets the status back to Open.', Comment = '%1 = Receipt No.';   //AAV.SP
         ReopenedMsg: Label 'Custom Receipt %1 has been reopened and its status reset to Open.', Comment = '%1 = Receipt No.';   //AAV.SP
         AlreadyOpenMsg: Label 'Custom Receipt %1 is already open.', Comment = '%1 = Receipt No.';   //AAV.SP
