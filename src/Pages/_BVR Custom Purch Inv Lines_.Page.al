@@ -4,20 +4,20 @@ page 50131 "BVR Custom Purch Inv Lines"
     SourceTable = "Purchase Line";
     Caption = 'Lines';
     ApplicationArea = All;
-
+    AutoSplitKey = true;
     layout
     {
         area(content)
         {
             repeater(Lines)
             {
+                Editable = NOT Rec."BVR From Custom Receipt";
                 field(Type; Rec.Type)
                 {
                     ApplicationArea = All;
-
                     trigger OnValidate()
                     begin
-                        if not(Rec.Type in[Rec.Type::Item, Rec.Type::"G/L Account"])then Error('Only Item and G/L Account lines are allowed.');
+                        if not (Rec.Type in [Rec.Type::Item, Rec.Type::"G/L Account"]) then Error('Only Item and G/L Account lines are allowed.');
                     end;
                 }
                 field("No."; Rec."No.")

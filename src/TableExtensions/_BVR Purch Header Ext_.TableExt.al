@@ -55,6 +55,11 @@ tableextension 50110 "BVR Purch Header Ext" extends "Purchase Header"
             DataClassification = CustomerContent;
             Editable = false;
         }
+        field(50122; "BVR Custom Invoice No."; code[20])
+        {
+            Caption = 'Custom Invoice Number';
+            DataClassification = CustomerContent;
+        }
 
     }
     /*  trigger OnInsert()

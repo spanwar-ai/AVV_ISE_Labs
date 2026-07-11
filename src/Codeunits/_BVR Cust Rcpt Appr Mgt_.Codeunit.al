@@ -10,6 +10,8 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
     // ---------------------------------------------------------------------
     procedure CheckCustomReceiptApprovalsWorkflowEnabled(var PurchaseHeader: Record "Purchase Header"): Boolean
     begin
+        if purchaseHeader."Document Type" = PurchaseHeader."Document Type"::Invoice then
+            exit(true);
         if not IsCustomReceiptApprovalsWorkflowEnabled(PurchaseHeader) then
             Error(NoWorkflowEnabledErr);
         exit(true);
@@ -171,22 +173,29 @@ codeunit 50244 "BVR Cust Rcpt Appr Mgt"
     var
         CustRcptApprEvents: Codeunit "BVR Cust Rcpt Appr Events";   //AAV.SP
     begin
-        PurchaseHeader.TestField("Document Type", PurchaseHeader."Document Type"::Order);   //AAV.SP
-        PurchaseHeader.TestField("BVR Receive PO", true);                                   //AAV.SP
-        PurchaseHeader.TestField("BVR Receipt Status", PurchaseHeader."BVR Receipt Status"::"Sent to AP Team");   //AAV.SP
-        if not IsAPTeam() then                                                              //AAV.SP
-            Error(APTeamOnlyErr);                                                           //AAV.SP
-        // Both accrual accounts are mandatory before the receipt can go for approval.   //AAV.SP
-        PurchaseHeader.TestField("BVR Vendor Accrual Acc No.");                             //AAV.SP
-        PurchaseHeader.TestField("BVR Expense Accrual Acc No.");                            //AAV.SP
-        CheckCustomReceiptApprovalsWorkflowEnabled(PurchaseHeader);                         //AAV.SP
+        if PurchaseHeader."Document Type" = PurchaseHeader."Document Type"::Order then begin
+            PurchaseHeader.TestField("Document Type", PurchaseHeader."Document Type"::Order);   //AAV.SP
+            PurchaseHeader.TestField("BVR Receive PO", true);                                   //AAV.SP
+            PurchaseHeader.TestField("Vendor Invoice No.");                            //AAV.SP
+            PurchaseHeader.TestField("BVR Receipt Status", PurchaseHeader."BVR Receipt Status"::"Sent to AP Team");   //AAV.SP
+            if not IsAPTeam() then                                                              //AAV.SP
+                Error(APTeamOnlyErr);                                                           //AAV.SP
+                                                                                                // Both accrual accounts are mandatory before the receipt can go for approval.   //AAV.SP
+            PurchaseHeader.TestField("BVR Vendor Accrual Acc No.");                             //AAV.SP
+            PurchaseHeader.TestField("BVR Expense Accrual Acc No.");                            //AAV.SP
+            CheckCustomReceiptApprovalsWorkflowEnabled(PurchaseHeader);                         //AAV.SP
 
-        PurchaseHeader."BVR AP Updated" := true;                                            //AAV.SP
-        PurchaseHeader."BVR Sent For Approval" := true;                                     //AAV.SP - keep the old boolean in sync
-        PurchaseHeader."BVR Approved" := false;                                             //AAV.SP
-        PurchaseHeader."BVR Receipt Status" := PurchaseHeader."BVR Receipt Status"::"Pending Approval";   //AAV.SP
-        PurchaseHeader.Modify(true);                                                        //AAV.SP
-
+            PurchaseHeader."BVR AP Updated" := true;                                            //AAV.SP
+            PurchaseHeader."BVR Sent For Approval" := true;                                     //AAV.SP - keep the old boolean in sync
+            PurchaseHeader."BVR Approved" := false;                                             //AAV.SP
+            PurchaseHeader."BVR Receipt Status" := PurchaseHeader."BVR Receipt Status"::"Pending Approval";   //AAV.SP
+            PurchaseHeader.Modify(true);                                                        //AAV.SP
+        end;
+        if purchaseHeader."Document Type" = PurchaseHeader."Document Type"::Invoice then begin
+            PurchaseHeader.TestField("Vendor Invoice No.");
+            PurchaseHeader.TestField(Status, PurchaseHeader.status::Open);
+            CheckCustomReceiptApprovalsWorkflowEnabled(PurchaseHeader);
+        end;
         // Hand off to the native workflow (creates approval entries, sends requests).   //AAV.SP
         CustRcptApprEvents.OnSendCustomReceiptForApproval(PurchaseHeader);                  //AAV.SP
     end;
