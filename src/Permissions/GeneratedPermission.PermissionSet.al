@@ -38,5 +38,11 @@ permissionset 50100 GeneratedPermission
         codeunit "BVR Cust Rcpt Appr Events" = X,
         codeunit "BVR Cust Rcpt Appr Resp" = X,
         codeunit "BVR Cust Rcpt Appr Mgt" = X,
-        codeunit "BVR Cust Rcpt Appr WF Setup" = X;
+        codeunit "BVR Cust Rcpt Appr WF Setup" = X,
+        // Standard-PO accrual flow (receipt accrual, AP/approval helper, invoice get-lines).   //AAV
+        codeunit "BVR Std Rcpt Accrual" = X,
+        codeunit "BVR Std PO Appr Mgt" = X,
+        codeunit "BVR Std Get Receipt Lines" = X,
+        codeunit "BVR Undo Receipt Accrual" = X,
+        codeunit "BVR Vendor Inv No Mgt" = X;
 }

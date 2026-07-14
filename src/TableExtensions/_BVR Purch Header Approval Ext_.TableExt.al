@@ -32,5 +32,14 @@ tableextension 50210 "BVR Purch Header Approval Ext" extends "Purchase Header"
             DataClassification = CustomerContent;
             Editable = false;
         }
+        // Standard-PO accrual flow: set when the PO is sent to the AP team to update the
+        // accrual accounts, cleared on Reopen. Gates the standard Send Approval Request so
+        // it can only be raised after the AP team has been notified.   //AAV
+        field(50206; "BVR Sent To AP Team"; Boolean)   //AAV
+        {
+            Caption = 'Sent To AP Team';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
     }
 }

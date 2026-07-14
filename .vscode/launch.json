@@ -14,7 +14,7 @@
             "tenant": "a7db8233-4e53-45b1-a793-d66b444c5faa",
             "enableLongRunningSqlStatements": true,
             "enableSqlInformationDebugger": true,
-            "schemaUpdateMode": "Synchronize"
+            "schemaUpdateMode": "ForceSync"
         }
     ]
 }

@@ -7,13 +7,15 @@ tableextension 50114 "BVR Purch Line Ext" extends "Purchase Line"
             Caption = 'From Custom Receipt';
             DataClassification = CustomerContent;
         }
-        field(50101; "BVR Source Rcpt No."; Code[20])
+        // Renumbered out of the 50100-50103 range to avoid a TransferFields type
+        // collision with "Purch. Rcpt. Line" (50101 Decimal / 50102 Decimal) during posting. //AAV
+        field(50120; "BVR Source Rcpt No."; Code[20])
         {
             Caption = 'Source Receipt No.';
             DataClassification = CustomerContent;
             TableRelation = "Purch. Rcpt. Header"."No.";
         }
-        field(50102; "BVR Source Rcpt Line No."; Integer)
+        field(50121; "BVR Source Rcpt Line No."; Integer)
         {
             Caption = 'Source Receipt Line No.';
             DataClassification = CustomerContent;
@@ -43,6 +45,24 @@ tableextension 50114 "BVR Purch Line Ext" extends "Purchase Line"
             DataClassification = CustomerContent;
             Editable = false;
             DecimalPlaces = 0: 5;
+        }
+        // Line-level accrual accounts copied from the source receipt by Get Receipt Lines
+        // (Accrual). "BVR Std Get Receipt Lines" redirects this line's cost debit to the
+        // Vendor Accrual account at invoice posting (OnPrepareLineOnBeforeSetAccount), so the
+        // invoice books Dr Vendor Accrual / Cr Vendor and clears the receipt GRNI.   //AAV
+        field(50122; "BVR Vendor Accrual Acc No."; Code[20])
+        {
+            Caption = 'Vendor Accrual Account';
+            DataClassification = CustomerContent;
+            TableRelation = "G/L Account"."No.";
+            Editable = false;
+        }
+        field(50123; "BVR Expense Accrual Acc No."; Code[20])
+        {
+            Caption = 'Expense Accrual Account';
+            DataClassification = CustomerContent;
+            TableRelation = "G/L Account"."No.";
+            Editable = false;
         }
     }
 }

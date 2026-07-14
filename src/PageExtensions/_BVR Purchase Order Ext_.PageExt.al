@@ -1,54 +1,88 @@
 pageextension 50111 "BVR Purchase Order Ext" extends "Purchase Order"
 {
+    // Standard purchase order accrual flow. BC's STANDARD status and STANDARD approval
+    // process drive the document; we only add:   //AAV
+    //   * a "Send to AP Team" step (notifies AP, marks BVR Sent To AP Team),
+    //   * "Send Approval Request" enabled only for AP-team users, after Send to AP Team,
+    //     and only once both accrual accounts are filled,
+    //   * accrual accounts editable only while Status = Open.
+    // Reopen clears the marker so the PO must be sent to AP again (handled in the codeunit).
     layout
     {
         addlast(General)
         {
-            field("BVR Receive PO"; Rec."BVR Receive PO")
+            field("BVR Sent To AP Team"; Rec."BVR Sent To AP Team")   //AAV
             {
                 ApplicationArea = All;
-                ToolTip = 'Mark this Purchase Order to be processed through the Custom Purchase Receipt page.';
+                Editable = false;
+                ToolTip = 'Specifies that this Purchase Order has been sent to the AP team to update the accrual accounts. Cleared when the order is reopened.';
             }
-        //field("BVR Vendor Accrual Acc No."; Rec."BVR Vendor Accrual Acc No.")
-        //{
-        //  ApplicationArea = All;
-        //ToolTip = 'G/L account used as Vendor Accrual (liability) during custom receipt and invoice reversal.';
-        //}
-        //field("BVR Expense Accrual Acc No."; Rec."BVR Expense Accrual Acc No.")
-        //{
-        //  ApplicationArea = All;
-        //ToolTip = 'G/L account used as Expense (accrual/expense) during custom receipt and invoice variance.';
-        //}
+            field("BVR Expense Accrual Acc No."; Rec."BVR Expense Accrual Acc No.")   //AAV
+            {
+                ApplicationArea = All;
+                Editable = Rec.Status = Rec.Status::Open;   //AAV - editable only while Open (locked once sent for approval)
+                ToolTip = 'G/L account debited (Expense Accrual) when this Purchase Order''s receipt is posted.';
+            }
+            field("BVR Vendor Accrual Acc No."; Rec."BVR Vendor Accrual Acc No.")   //AAV
+            {
+                ApplicationArea = All;
+                Editable = Rec.Status = Rec.Status::Open;   //AAV - editable only while Open
+                ToolTip = 'G/L account credited (Vendor Accrual / GRNI liability) when this Purchase Order''s receipt is posted.';
+            }
         }
     }
-/* actions
+
+    actions
     {
-        addlast(Processing)
+        // Promote "Send to AP Team" onto the Home tab, right after Release.   //AAV
+        addafter(Category_Category5)
         {
-            action("Send to Custom Receipt")
-            {
-                ApplicationArea = All;
-                Caption = 'Send to Custom Receipt';
-                Image = SendTo;
-                Promoted = true;
-                PromotedCategory = Process;
-
-                trigger OnAction()
-                var
-                    PurchHdr: Record "Purchase Header";
-                begin
-                    Rec.TestField("Document Type", Rec."Document Type"::Order);
-                    Rec.TestField("Buy-from Vendor No.");
-                    //Rec.TestField("BVR Vendor Accrual Acc No.");
-                    //Rec.TestField("BVR Expense Accrual Acc No.");
-                    rec.TestField(Status, rec.Status::Released);
-                    Rec."BVR Receive PO" := true;
-                    Rec.Modify(true);
-
-                    PurchHdr.Get(Rec."Document Type", Rec."No.");
-                    Page.Run(Page::"BVR Custom Purch Receipt", PurchHdr);
-                end;
-            }
+            actionref("BVR Send to AP Team_Promoted"; "BVR Send to AP Team") { }   //AAV
         }
-    } */
+        addlast(processing)
+        {
+            action("BVR Send to AP Team")                                                        //AAV
+            {                                                                                    //AAV
+                ApplicationArea = All;                                                           //AAV
+                Caption = 'Send to AP Team';                                                     //AAV
+                Image = SendTo;                                       //AAV
+                Enabled = (Rec.Status = Rec.Status::Open);   //AAV
+                ToolTip = 'Send this Purchase Order to the AP team to update the accrual accounts. The AP team is notified by email and can then send it for approval.'; //AAV
+
+                trigger OnAction()                                                               //AAV
+                var                                                                              //AAV
+                    StdApprMgt: Codeunit "BVR Std PO Appr Mgt";                                  //AAV
+                begin                                                                            //AAV
+                    StdApprMgt.SendToAPTeam(Rec);                                                //AAV
+                    CurrPage.Update(false);                                                      //AAV
+                end;                                                                             //AAV
+            }                                                                                    //AAV
+        }
+        // Standard Send Approval Request: AP-team users only, after Send to AP Team, and only
+        // once both accrual accounts are filled. Everything else (approve/reject/delegate/
+        // cancel, and the posting restriction while pending) is standard BC.   //AAV
+        modify(SendApprovalRequest)
+        {
+            Enabled = IsAPTeamUser and (Rec.Status = Rec.Status::Open) and Rec."BVR Sent To AP Team"   //AAV
+                      and (Rec."BVR Expense Accrual Acc No." <> '') and (Rec."BVR Vendor Accrual Acc No." <> '');   //AAV
+        }
+        modify("Send Intercompany Purchase Order")
+        {
+            visible = false;
+        }
+        modify("Create Inventor&y Put-away/Pick")
+        {
+            visible = false;
+        }
+    }
+
+    trigger OnAfterGetCurrRecord()
+    var
+        CustApprMgt: Codeunit "BVR Cust Rcpt Appr Mgt";   //AAV
+    begin
+        IsAPTeamUser := CustApprMgt.IsAPTeam();   //AAV
+    end;
+
+    var
+        IsAPTeamUser: Boolean;   //AAV
 }
