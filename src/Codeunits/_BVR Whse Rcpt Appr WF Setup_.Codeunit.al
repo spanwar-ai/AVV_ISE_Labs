@@ -131,12 +131,16 @@ codeunit 50133 "BVR Whse Rcpt Appr WF Setup"
     local procedure WorkflowHasFullSteps(var Workflow: Record Workflow): Boolean
     var
         WhseRcptApprEvents: Codeunit "BVR Whse Rcpt Appr Events";
+        WhseRcptPostResponse: Codeunit "BVR Whse Rcpt Post Response";
         WorkflowResponseHandling: Codeunit "Workflow Response Handling";
         WorkflowEventHandling: Codeunit "Workflow Event Handling";
     begin
         if not HasStep(Workflow, WorkflowResponseHandling.ReleaseDocumentCode()) then
             exit(false);
         if not HasStep(Workflow, WhseRcptApprEvents.RunWorkflowOnCancelWhseReceiptApprovalRequestCode()) then
+            exit(false);
+        // Auto-post step - a workflow built before it existed must be rebuilt.   //AAV.SP
+        if not HasStep(Workflow, WhseRcptPostResponse.PostWhseReceiptResponseCode()) then
             exit(false);
         // Foreign / obsolete steps -> not our clean structure.
         if HasStep(Workflow, 'BVRSETWHSERCPTRELEASED') then
@@ -222,6 +226,26 @@ codeunit 50133 "BVR Whse Rcpt Appr WF Setup"
             WhseRcptApprEvents.RunWorkflowOnCancelWhseReceiptApprovalRequestCode(),
             WorkflowStepArgument,
             true);   // ShowConfirmationMessage
+
+        AppendAutoPostStep(Workflow);
+    end;
+
+    // Chain "Post the Warehouse Receipt" onto the Release Document response, i.e. onto the branch the
+    // builder creates for "all approvals granted". The receipt is Released by that point, which is
+    // what the posting gate requires, and the branch's "no pending approvals" condition means it only
+    // fires on the FINAL approval - never part-way through an approver chain.   //AAV.SP
+    local procedure AppendAutoPostStep(var Workflow: Record Workflow)
+    var
+        WorkflowStep: Record "Workflow Step";
+        WorkflowSetup: Codeunit "Workflow Setup";
+        WorkflowResponseHandling: Codeunit "Workflow Response Handling";
+        WhseRcptPostResponse: Codeunit "BVR Whse Rcpt Post Response";
+    begin
+        WorkflowStep.SetRange("Workflow Code", Workflow.Code);
+        WorkflowStep.SetRange("Function Name", WorkflowResponseHandling.ReleaseDocumentCode());
+        if not WorkflowStep.FindFirst() then
+            exit;
+        WorkflowSetup.InsertResponseStep(Workflow, WhseRcptPostResponse.PostWhseReceiptResponseCode(), WorkflowStep.ID);
     end;
 
     // The document builder requires a non-empty event condition on the entry and cancel events
