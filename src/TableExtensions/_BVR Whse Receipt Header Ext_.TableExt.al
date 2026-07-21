@@ -40,5 +40,28 @@ tableextension 50122 "BVR Whse Receipt Header Ext" extends "Warehouse Receipt He
             DataClassification = CustomerContent;
             Editable = false;
         }
+        // The two GLOBAL dimensions, captured on the Warehouse Receipt and pushed onto the source
+        // Purchase Order header(s) when the receipt is posted (see codeunit "BVR Whse Receipt Mgt").
+        // Plain shortcut codes - the Warehouse Receipt has no Dimension Set ID of its own, so the
+        // TableRelation (filtered on the global dimension no., blocked values excluded) is the whole
+        // validation. The real dimension set is built on the PO, by standard code.
+        // CaptionClass '1,2,n' makes the captions follow the dimension names configured in General
+        // Ledger Setup, exactly as on the Purchase Order.   //AAV.SP
+        field(50105; "BVR Shortcut Dimension 1 Code"; Code[20])
+        {
+            Caption = 'Shortcut Dimension 1 Code';
+            CaptionClass = '1,2,1';
+            DataClassification = CustomerContent;
+            TableRelation = "Dimension Value".Code where("Global Dimension No." = const(1),
+                                                          Blocked = const(false));
+        }
+        field(50106; "BVR Shortcut Dimension 2 Code"; Code[20])
+        {
+            Caption = 'Shortcut Dimension 2 Code';
+            CaptionClass = '1,2,2';
+            DataClassification = CustomerContent;
+            TableRelation = "Dimension Value".Code where("Global Dimension No." = const(2),
+                                                          Blocked = const(false));
+        }
     }
 }

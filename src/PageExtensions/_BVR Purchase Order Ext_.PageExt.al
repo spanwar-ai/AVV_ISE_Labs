@@ -29,6 +29,18 @@ pageextension 50111 "BVR Purchase Order Ext" extends "Purchase Order"
                 Editable = Rec.Status = Rec.Status::Open;   //AAV - editable only while Open
                 ToolTip = 'G/L account credited (Vendor Accrual / GRNI liability) when this Purchase Order''s receipt is posted.';
             }
+            field("BVR WH Shortcut Dim 1 Code"; Rec."BVR WH Shortcut Dim 1 Code")   //AAV.SP
+            {
+                ApplicationArea = Dimensions;
+                Editable = false;
+                ToolTip = 'Specifies the global dimension 1 code entered on the Warehouse Receipt, stamped here when that receipt is posted. It dimensions the accrual entry only - it does not change this order''s own dimensions.';
+            }
+            field("BVR WH Shortcut Dim 2 Code"; Rec."BVR WH Shortcut Dim 2 Code")   //AAV.SP
+            {
+                ApplicationArea = Dimensions;
+                Editable = false;
+                ToolTip = 'Specifies the global dimension 2 code entered on the Warehouse Receipt, stamped here when that receipt is posted. It dimensions the accrual entry only - it does not change this order''s own dimensions.';
+            }
         }
     }
 

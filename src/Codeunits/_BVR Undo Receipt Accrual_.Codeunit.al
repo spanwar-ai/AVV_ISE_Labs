@@ -91,6 +91,7 @@ codeunit 50124 "BVR Undo Receipt Accrual"
     var
         GenJnlLine: Record "Gen. Journal Line";
         GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
+        DimMgt: Codeunit DimensionManagement;
     begin
         if RcptLine."BVR Accrued Amount" = 0 then
             exit;
@@ -110,7 +111,22 @@ codeunit 50124 "BVR Undo Receipt Accrual"
         GenJnlLine.Validate(Amount, -RcptLine."BVR Accrued Amount");
         GenJnlLine.Validate("Bal. Account Type", GenJnlLine."Bal. Account Type"::"G/L Account");
         GenJnlLine.Validate("Bal. Account No.", RcptHdr."BVR Vendor Accrual Acc No.");
+        // Must mirror the accrual in codeunit "BVR Std Rcpt Accrual" exactly - both the shortcut
+        // codes AND the warehouse-dimension override. G/L Entry reads its Global Dimension 1/2
+        // columns from the SHORTCUT codes, so reversing with the set alone, or without the warehouse
+        // override, would net to zero in total but NOT per dimension, leaving permanent phantom
+        // balances on the accrual accounts by dimension.
+        // The warehouse dimensions reach the posted receipt via Purch.-Post's TransferFields (same
+        // field numbers 50108/50109 on both headers).   //AAV.SP
         GenJnlLine."Dimension Set ID" := RcptHdr."Dimension Set ID";
+        DimMgt.UpdateGlobalDimFromDimSetID(
+            GenJnlLine."Dimension Set ID",
+            GenJnlLine."Shortcut Dimension 1 Code",
+            GenJnlLine."Shortcut Dimension 2 Code");
+        if RcptHdr."BVR WH Shortcut Dim 1 Code" <> '' then
+            GenJnlLine.Validate("Shortcut Dimension 1 Code", RcptHdr."BVR WH Shortcut Dim 1 Code");
+        if RcptHdr."BVR WH Shortcut Dim 2 Code" <> '' then
+            GenJnlLine.Validate("Shortcut Dimension 2 Code", RcptHdr."BVR WH Shortcut Dim 2 Code");
         GenJnlPostLine.RunWithCheck(GenJnlLine);
     end;
 

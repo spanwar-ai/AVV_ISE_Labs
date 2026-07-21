@@ -31,5 +31,22 @@ tableextension 50115 "BVR Purch Rcpt Header Ext" extends "Purch. Rcpt. Header"
             DataClassification = CustomerContent;
             Editable = false;
         }
+        // Same numbers and types as on Purchase Header (50108/50109), so Purch.-Post's
+        // TransferFields carries the warehouse dimensions onto the posted receipt. Codeunit
+        // "BVR Undo Receipt Accrual" reads them from here to reverse the accrual with exactly the
+        // dimensions it was posted under - otherwise accrual and reversal net to zero in total but
+        // leave phantom balances per dimension.   //AAV.SP
+        field(50108; "BVR WH Shortcut Dim 1 Code"; Code[20])
+        {
+            Caption = 'Warehouse Shortcut Dimension 1 Code';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
+        field(50109; "BVR WH Shortcut Dim 2 Code"; Code[20])
+        {
+            Caption = 'Warehouse Shortcut Dimension 2 Code';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
     }
 }

@@ -38,6 +38,18 @@ pageextension 50114 "BVR Warehouse Receipt Ext" extends "Warehouse Receipt"
                 Editable = AccrualEditable;   //AAV.SP
                 ToolTip = 'G/L account credited (Vendor Accrual / GRNI liability) when this Warehouse Receipt is posted. Editable only by the AP team while the receipt is Sent to AP Team.';
             }
+            field("BVR Shortcut Dimension 1 Code"; Rec."BVR Shortcut Dimension 1 Code")   //AAV.SP
+            {
+                ApplicationArea = Dimensions;
+                Editable = AccrualEditable;   //AAV.SP
+                ToolTip = 'Specifies the global dimension 1 code applied to the source Purchase Order - and so to the posted receipt and its G/L entries - when this Warehouse Receipt is posted. Leave blank to keep the dimension already on the order.';
+            }
+            field("BVR Shortcut Dimension 2 Code"; Rec."BVR Shortcut Dimension 2 Code")   //AAV.SP
+            {
+                ApplicationArea = Dimensions;
+                Editable = AccrualEditable;   //AAV.SP
+                ToolTip = 'Specifies the global dimension 2 code applied to the source Purchase Order - and so to the posted receipt and its G/L entries - when this Warehouse Receipt is posted. Leave blank to keep the dimension already on the order.';
+            }
         }
     }
 

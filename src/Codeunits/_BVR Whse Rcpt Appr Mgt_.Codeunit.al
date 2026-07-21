@@ -46,6 +46,12 @@ codeunit 50130 "BVR Whse Rcpt Appr Mgt"
             Error(APTeamOnlyErr);
         WhseReceiptHeader.TestField("BVR Vendor Accrual Acc No.");
         WhseReceiptHeader.TestField("BVR Expense Accrual Acc No.");
+        // Both global dimensions are mandatory before the receipt can go for approval: they are
+        // stamped onto the source Purchase Order(s) at posting time, so an approval granted without
+        // them would post to the wrong dimensions. TestField reports them under their configured
+        // dimension names (CaptionClass '1,2,n'), e.g. "DEPARTMENT must have a value".   //AAV.SP
+        WhseReceiptHeader.TestField("BVR Shortcut Dimension 1 Code");
+        WhseReceiptHeader.TestField("BVR Shortcut Dimension 2 Code");
         CheckWorkflowEnabled(WhseReceiptHeader);
 
         // Hand off to the native workflow. The document responses set the status: Pending Approval

@@ -16,6 +16,7 @@ codeunit 50125 "BVR Std Rcpt Accrual"
         RcptLine: Record "Purch. Rcpt. Line";
         GenJnlLine: Record "Gen. Journal Line";
         GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
+        DimMgt: Codeunit DimensionManagement;
         TotalAccrualAmt: Decimal;
     begin
         // Custom-receipt POs accrue via BVR Custom Rcpt Post V2 - avoid double posting.
@@ -57,10 +58,38 @@ codeunit 50125 "BVR Std Rcpt Accrual"
         GenJnlLine.Validate(Amount, TotalAccrualAmt);
         GenJnlLine.Validate("Bal. Account Type", GenJnlLine."Bal. Account Type"::"G/L Account");
         GenJnlLine.Validate("Bal. Account No.", PurchaseHeader."BVR Vendor Accrual Acc No.");
-        // Lines are clubbed into one entry, so use header dimensions.
+        // Lines are clubbed into one entry, so start from the order's header dimensions...
+        //
+        // Both parts are required. G/L Entry.CopyFromGenJnlLine takes "Global Dimension 1/2 Code"
+        // from the journal line's SHORTCUT codes and "Dimension Set ID" from the set - they are
+        // copied independently. Assigning only the set ID posts an entry whose dimension set is
+        // right but whose Global Dimension 1/2 columns are BLANK, which is what dimension-based
+        // analysis and most reports actually read. UpdateGlobalDimFromDimSetID derives the two
+        // shortcut codes back out of the set, keeping them consistent.   //AAV.SP
         GenJnlLine."Dimension Set ID" := PurchaseHeader."Dimension Set ID";
+        DimMgt.UpdateGlobalDimFromDimSetID(
+            GenJnlLine."Dimension Set ID",
+            GenJnlLine."Shortcut Dimension 1 Code",
+            GenJnlLine."Shortcut Dimension 2 Code");
+        // ...then let the warehouse dimensions carried over from the Warehouse Receipt override the
+        // two globals. Validate (not assignment) so the Dimension Set ID is rebuilt to match the new
+        // codes - it applies a delta, so any NON-global dimensions on the order survive.
+        // A blank warehouse dimension means "keep the order's own", not "clear it".   //AAV.SP
+        ApplyWarehouseDimensions(PurchaseHeader, GenJnlLine);
         GenJnlLine.Description := CopyStr(StrSubstNo('Receipt accrual %1', RcptHdr."No."), 1, MaxStrLen(GenJnlLine.Description));
         GenJnlPostLine.RunWithCheck(GenJnlLine);
+    end;
+
+    // Override the accrual line's two global dimensions with the ones the AP team entered on the
+    // Warehouse Receipt (stamped onto the PO header by codeunit "BVR Whse Receipt Mgt"). This is the
+    // ONLY place those dimensions are applied - the Purchase Order's own dimensions, its Dimension
+    // Set ID and its lines are never modified by the warehouse flow.   //AAV.SP
+    local procedure ApplyWarehouseDimensions(var PurchaseHeader: Record "Purchase Header"; var GenJnlLine: Record "Gen. Journal Line")
+    begin
+        if PurchaseHeader."BVR WH Shortcut Dim 1 Code" <> '' then
+            GenJnlLine.Validate("Shortcut Dimension 1 Code", PurchaseHeader."BVR WH Shortcut Dim 1 Code");
+        if PurchaseHeader."BVR WH Shortcut Dim 2 Code" <> '' then
+            GenJnlLine.Validate("Shortcut Dimension 2 Code", PurchaseHeader."BVR WH Shortcut Dim 2 Code");
     end;
 
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Copy Document Mgt.", OnBeforeInsertToPurchLine, '', false, false)]

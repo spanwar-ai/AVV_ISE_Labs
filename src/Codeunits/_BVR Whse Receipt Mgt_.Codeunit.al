@@ -5,9 +5,10 @@ codeunit 50129 "BVR Whse Receipt Mgt"
     //   1. Whse.-Create Source Document -> blank Qty. to Receive on purchase-sourced lines so
     //      the user explicitly enters what to receive.
     //   2. Whse.-Post Receipt (get header) -> block posting until the WR is Released, remember the
-    //      WR No. for stamping, and push the WR's accrual accounts onto the source PO header(s) so
-    //      the standard receipt-accrual (codeunit "BVR Std Rcpt Accrual") books the same G/L entry
-    //      it does for a normal PO receipt.
+    //      WR No. for stamping, and push the WR's accrual accounts AND its two global dimensions onto
+    //      the source PO header(s) so the standard receipt-accrual (codeunit "BVR Std Rcpt Accrual")
+    //      books the same G/L entry it does for a normal PO receipt, and the dimensions reach the
+    //      posted receipt and the G/L entries through standard posting.
     //   3. Whse.-Post Receipt (after posting the purchase header) -> stamp the WR No. onto the
     //      resulting Purchase Receipt.
     //   4. Whse.-Post Receipt (after the whole post) -> delete the ENTIRE Warehouse Receipt once it
@@ -49,7 +50,7 @@ codeunit 50129 "BVR Whse Receipt Mgt"
         // Runs before the source documents post, so "BVR Std Rcpt Accrual" (OnAfterPostPurchaseDoc)
         // finds the accrual accounts on the PO header and books the accrual exactly as it does for a
         // normal PO receipt. They also transfer onto the posted receipt header for invoicing.   //AAV
-        StampAccrualAccountsOnSourcePOs(WarehouseReceiptHeader);
+        StampWhseReceiptDataOnSourcePOs(WarehouseReceiptHeader);
     end;
 
     // A Warehouse Receipt belongs to this approval flow if it already carries the approval flag OR it
@@ -67,15 +68,19 @@ codeunit 50129 "BVR Whse Receipt Mgt"
         exit(not WarehouseReceiptLine.IsEmpty());
     end;
 
-    // Copy the WR's accrual accounts onto every source Purchase Order header of this receipt. The WR
-    // (filled by the AP team) is the source of truth for the accrual accounts in this flow.   //AAV
-    local procedure StampAccrualAccountsOnSourcePOs(var WarehouseReceiptHeader: Record "Warehouse Receipt Header")
+    // Copy the WR's accrual accounts AND its two global dimensions onto every source Purchase Order
+    // header of this receipt. The WR (filled by the AP team) is the source of truth for both in this
+    // flow, and pushing them onto the PO before it posts is what makes them reach the posted receipt
+    // and the G/L entries through entirely standard posting code.   //AAV
+    local procedure StampWhseReceiptDataOnSourcePOs(var WarehouseReceiptHeader: Record "Warehouse Receipt Header")
     var
         WarehouseReceiptLine: Record "Warehouse Receipt Line";
         PurchaseHeader: Record "Purchase Header";
     begin
         if (WarehouseReceiptHeader."BVR Vendor Accrual Acc No." = '') and
-           (WarehouseReceiptHeader."BVR Expense Accrual Acc No." = '')
+           (WarehouseReceiptHeader."BVR Expense Accrual Acc No." = '') and
+           (WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code" = '') and
+           (WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code" = '')
         then
             exit;
         WarehouseReceiptLine.SetRange("No.", WarehouseReceiptHeader."No.");
@@ -83,14 +88,32 @@ codeunit 50129 "BVR Whse Receipt Mgt"
         if WarehouseReceiptLine.FindSet() then
             repeat
                 if PurchaseHeader.Get(PurchaseHeader."Document Type"::Order, WarehouseReceiptLine."Source No.") then
-                    if (PurchaseHeader."BVR Vendor Accrual Acc No." <> WarehouseReceiptHeader."BVR Vendor Accrual Acc No.") or
-                       (PurchaseHeader."BVR Expense Accrual Acc No." <> WarehouseReceiptHeader."BVR Expense Accrual Acc No.")
-                    then begin
-                        PurchaseHeader."BVR Vendor Accrual Acc No." := WarehouseReceiptHeader."BVR Vendor Accrual Acc No.";
-                        PurchaseHeader."BVR Expense Accrual Acc No." := WarehouseReceiptHeader."BVR Expense Accrual Acc No.";
-                        PurchaseHeader.Modify();
-                    end;
+                    StampAccrualsAndDimensions(WarehouseReceiptHeader, PurchaseHeader);
             until WarehouseReceiptLine.Next() = 0;
+    end;
+
+    // Plain assignment throughout - every target is one of OUR fields, so there is nothing to
+    // validate and nothing standard to disturb.
+    //
+    // The warehouse dimensions go into "BVR WH Shortcut Dim 1/2 Code", NOT into the order's own
+    // "Shortcut Dimension 1/2 Code". That is deliberate: validating the order's real shortcut
+    // dimensions would rebuild its Dimension Set ID and cascade onto every purchase line, changing
+    // the dimensions the order itself posts under. The warehouse dimensions are only meant to
+    // dimension the ACCRUAL entry, which codeunit "BVR Std Rcpt Accrual" builds from these two
+    // fields.   //AAV.SP
+    local procedure StampAccrualsAndDimensions(var WarehouseReceiptHeader: Record "Warehouse Receipt Header"; var PurchaseHeader: Record "Purchase Header")
+    begin
+        if (PurchaseHeader."BVR Vendor Accrual Acc No." = WarehouseReceiptHeader."BVR Vendor Accrual Acc No.") and
+           (PurchaseHeader."BVR Expense Accrual Acc No." = WarehouseReceiptHeader."BVR Expense Accrual Acc No.") and
+           (PurchaseHeader."BVR WH Shortcut Dim 1 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code") and
+           (PurchaseHeader."BVR WH Shortcut Dim 2 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code")
+        then
+            exit;
+        PurchaseHeader."BVR Vendor Accrual Acc No." := WarehouseReceiptHeader."BVR Vendor Accrual Acc No.";
+        PurchaseHeader."BVR Expense Accrual Acc No." := WarehouseReceiptHeader."BVR Expense Accrual Acc No.";
+        PurchaseHeader."BVR WH Shortcut Dim 1 Code" := WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code";
+        PurchaseHeader."BVR WH Shortcut Dim 2 Code" := WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code";
+        PurchaseHeader.Modify();
     end;
 
     // 3 - After each source purchase document is posted, PurchaseHeader."Last Receiving No." is
