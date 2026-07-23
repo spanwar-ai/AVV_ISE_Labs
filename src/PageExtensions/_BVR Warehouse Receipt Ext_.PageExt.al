@@ -51,6 +51,20 @@ pageextension 50114 "BVR Warehouse Receipt Ext" extends "Warehouse Receipt"
                 ToolTip = 'Specifies the global dimension 2 code applied to the source Purchase Order - and so to the posted receipt and its G/L entries - when this Warehouse Receipt is posted. Leave blank to keep the dimension already on the order.';
             }
         }
+        // Attachments on the Warehouse Receipt. The AP team / warehouse can attach the supplier
+        // packing slip, delivery note etc. here; codeunit "BVR Copy Attachments" copies them onto
+        // the posted Purchase Receipt(s) when the WR is posted (the WR itself is deleted after
+        // posting, so this is a MOVE - see "BVR Whse Receipt Mgt"). Same standard factbox the
+        // custom-receipt flow uses, keyed on table 7316.   //AAV.SP
+        addfirst(factboxes)
+        {
+            part(BVRDocAttach; "Doc. Attachment List Factbox")
+            {
+                Caption = 'Attachments';
+                ApplicationArea = Warehouse;
+                SubPageLink = "Table ID" = const(7316), "No." = field("No.");
+            }
+        }
     }
 
     actions

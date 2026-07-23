@@ -122,6 +122,7 @@ codeunit 50129 "BVR Whse Receipt Mgt"
     local procedure StampWhseReceiptNoOnReceipt(PurchaseHeader: Record "Purchase Header")
     var
         PurchRcptHeader: Record "Purch. Rcpt. Header";
+        CopyAttachments: Codeunit "BVR Copy Attachments";
     begin
         if CurrentWhseReceiptNo = '' then
             exit;
@@ -129,6 +130,10 @@ codeunit 50129 "BVR Whse Receipt Mgt"
             exit;
         if not PurchRcptHeader.Get(PurchaseHeader."Last Receiving No.") then
             exit;
+        // Copy the WR's attachments onto this posted receipt. Done here (not at OnAfterCode) because
+        // this is where the posted receipt is known; for a multi-PO WR it fires once per posted
+        // receipt, so each receipt carries the WR's documents. Idempotent on re-entry.   //AAV.SP
+        CopyAttachments.CopyWhseReceiptAttachmentsToPosted(CurrentWhseReceiptNo, PurchRcptHeader);
         if PurchRcptHeader."BVR Source Whse Receipt No." = CurrentWhseReceiptNo then
             exit;
         PurchRcptHeader."BVR Source Whse Receipt No." := CurrentWhseReceiptNo;
@@ -151,7 +156,13 @@ codeunit 50129 "BVR Whse Receipt Mgt"
     local procedure DeleteWholeWhseReceiptAfterPost(var WarehouseReceiptHeader: Record "Warehouse Receipt Header")
     var
         WhseRcptHeader: Record "Warehouse Receipt Header";
+        CopyAttachments: Codeunit "BVR Copy Attachments";
     begin
+        // Clear the WR's attachment rows - they were copied onto the posted receipt(s) in
+        // StampWhseReceiptNoOnReceipt, and Warehouse Receipt Header has no OnDelete that clears them.
+        // Done FIRST and keyed off "No." because on a full receipt base BC has already deleted the
+        // header by the time this fires, so the Get below would exit before cleanup ran.   //AAV.SP
+        CopyAttachments.DeleteWhseReceiptAttachments(WarehouseReceiptHeader."No.");
         // Already gone when everything was received - only act if a partial receipt left it behind.
         if not WhseRcptHeader.Get(WarehouseReceiptHeader."No.") then
             exit;
