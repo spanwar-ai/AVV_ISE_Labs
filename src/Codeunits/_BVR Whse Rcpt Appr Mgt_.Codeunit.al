@@ -51,7 +51,7 @@ codeunit 50130 "BVR Whse Rcpt Appr Mgt"
         // them would post to the wrong dimensions. TestField reports them under their configured
         // dimension names (CaptionClass '1,2,n'), e.g. "DEPARTMENT must have a value".   //AAV.SP
         WhseReceiptHeader.TestField("BVR Shortcut Dimension 1 Code");
-        WhseReceiptHeader.TestField("BVR Shortcut Dimension 2 Code");
+        //WhseReceiptHeader.TestField("BVR Shortcut Dimension 2 Code");
         CheckWorkflowEnabled(WhseReceiptHeader);
 
         // Hand off to the native workflow. The document responses set the status: Pending Approval

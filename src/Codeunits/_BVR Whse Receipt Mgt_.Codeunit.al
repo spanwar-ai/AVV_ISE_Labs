@@ -79,8 +79,8 @@ codeunit 50129 "BVR Whse Receipt Mgt"
     begin
         if (WarehouseReceiptHeader."BVR Vendor Accrual Acc No." = '') and
            (WarehouseReceiptHeader."BVR Expense Accrual Acc No." = '') and
-           (WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code" = '') and
-           (WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code" = '')
+           (WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code" = '')
+        //          (WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code" = '')
         then
             exit;
         WarehouseReceiptLine.SetRange("No.", WarehouseReceiptHeader."No.");
@@ -105,8 +105,8 @@ codeunit 50129 "BVR Whse Receipt Mgt"
     begin
         if (PurchaseHeader."BVR Vendor Accrual Acc No." = WarehouseReceiptHeader."BVR Vendor Accrual Acc No.") and
            (PurchaseHeader."BVR Expense Accrual Acc No." = WarehouseReceiptHeader."BVR Expense Accrual Acc No.") and
-           (PurchaseHeader."BVR WH Shortcut Dim 1 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code") and
-           (PurchaseHeader."BVR WH Shortcut Dim 2 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code")
+           (PurchaseHeader."BVR WH Shortcut Dim 1 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code")
+        //   (PurchaseHeader."BVR WH Shortcut Dim 2 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code")
         then
             exit;
         PurchaseHeader."BVR Vendor Accrual Acc No." := WarehouseReceiptHeader."BVR Vendor Accrual Acc No.";
