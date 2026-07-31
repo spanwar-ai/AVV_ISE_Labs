@@ -4,8 +4,36 @@ pageextension 50116 "BVR Posted Purch Rcpt Ext" extends "Posted Purchase Receipt
     // WR that produced this receipt is visible/traceable.   //AAV
     layout
     {
+        // A page extension can only change PROPERTIES of a base control - it cannot add an
+        // OnDrillDown trigger to it. So the base "Order No." is hidden and replaced by a drillable
+        // copy that opens the source purchase order.   //AAV.SP
+        modify("Order No.")
+        {
+            Visible = false;
+        }
         addafter("Order No.")
         {
+            field("BVR Order No."; Rec."Order No.")   //AAV.SP
+            {
+                ApplicationArea = All;
+                Caption = 'Order No.';
+                Editable = false;
+                DrillDown = true;
+                ToolTip = 'Specifies the purchase order this receipt was posted from. Choose the value to open the order.';
+
+                trigger OnDrillDown()
+                var
+                    PurchDocMgt: Codeunit "BVR Purch Doc Mgt";
+                begin
+                    PurchDocMgt.ShowPurchaseOrder(Rec."Order No.");
+                end;
+            }
+            field("BVR Blanket Order No."; Rec."BVR Blanket Order No.")   //AAV.SP
+            {
+                ApplicationArea = All;
+                Editable = false;
+                ToolTip = 'Specifies the blanket purchase order the order behind this receipt was created from.';
+            }
             field("BVR Source Whse Receipt No."; Rec."BVR Source Whse Receipt No.")   //AAV
             {
                 ApplicationArea = Warehouse;

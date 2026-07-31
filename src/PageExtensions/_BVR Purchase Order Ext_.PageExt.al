@@ -11,6 +11,12 @@ pageextension 50111 "BVR Purchase Order Ext" extends "Purchase Order"
     {
         addlast(General)
         {
+            field("BVR Blanket Order No."; Rec."BVR Blanket Order No.")   //AAV.SP
+            {
+                ApplicationArea = All;
+                Editable = false;
+                ToolTip = 'Specifies the blanket purchase order this order was created from. It is set automatically by Make Order and is blank for orders entered directly.';
+            }
             field("BVR Sent To AP Team"; Rec."BVR Sent To AP Team")   //AAV
             {
                 ApplicationArea = All;

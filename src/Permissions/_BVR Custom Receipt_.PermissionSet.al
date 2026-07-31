@@ -11,6 +11,7 @@ permissionset 50300 "BVR Custom Receipt"
         codeunit "BVR Custom Rcpt Post V2"=X,
         codeunit "BVR Receipt Approval Mgt"=X,
         codeunit "BVR Posting Preview Mgt"=X,
+        codeunit "BVR Purch Doc Mgt"=X,
         codeunit "BVR Create Custom Invoice"=X,
         page "BVR Custom Purch Receipt"=X,
         page "BVR Custom Purch Rcpt Lines"=X,

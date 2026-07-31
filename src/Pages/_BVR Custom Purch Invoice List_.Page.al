@@ -3,7 +3,7 @@ page 50132 "BVR Custom Purch Invoice List"
     PageType = List;
     SourceTable = "Purchase Header";
     Caption = 'Custom Purchase Invoices';
-    ApplicationArea = All;
+    // ApplicationArea = All;
     UsageCategory = Lists;
     CardPageId = "BVR Custom Purch Invoice";
     Editable = false;
@@ -12,7 +12,7 @@ page 50132 "BVR Custom Purch Invoice List"
     DeleteAllowed = false;
     // Show only invoices (and typically only those created for this custom flow)
     // Filter: Document Type = Invoice AND Vendor Accrual Account not blank
-    SourceTableView = where("Document Type"=const(Invoice));
+    SourceTableView = where("Document Type" = const(Invoice));
 
     layout
     {
@@ -53,19 +53,23 @@ page 50132 "BVR Custom Purch Invoice List"
             }
         }
     }
-    var StatusStyle: Text;
+    var
+        StatusStyle: Text;
+
     trigger OnOpenPage()
     begin
         // Keep list scoped to the custom flow: invoices with accrual accounts filled.
         Rec.SetRange("Document Type", Rec."Document Type"::Invoice);
-    //Rec.SetFilter("BVR Vendor Accrual Acc No.", '<>%1', '');
+        //Rec.SetFilter("BVR Vendor Accrual Acc No.", '<>%1', '');
     end;
-    local procedure GetPostedStatusTxt(): Text begin
+
+    local procedure GetPostedStatusTxt(): Text
+    begin
         if Rec."BVR Custom Inv Posted" then begin
-            StatusStyle:='Success';
+            StatusStyle := 'Success';
             exit('Posted');
         end;
-        StatusStyle:='Attention';
+        StatusStyle := 'Attention';
         exit('Not Posted');
     end;
 }

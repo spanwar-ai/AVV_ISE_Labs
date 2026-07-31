@@ -5,6 +5,32 @@ pageextension 50137 "BVR Posted Purch Rcpts List" extends "Posted Purchase Recei
     // Document Attachment framework so upload works as well as display.   //AAV.SP
     layout
     {
+        // Base page 145 does not show Order No. at all, so it is added here as a drillable column
+        // that opens the source purchase order.   //AAV.SP
+        addafter("No.")
+        {
+            field("BVR Order No."; Rec."Order No.")   //AAV.SP
+            {
+                ApplicationArea = All;
+                Caption = 'Order No.';
+                Editable = false;
+                DrillDown = true;
+                ToolTip = 'Specifies the purchase order this receipt was posted from. Choose the value to open the order.';
+
+                trigger OnDrillDown()
+                var
+                    PurchDocMgt: Codeunit "BVR Purch Doc Mgt";
+                begin
+                    PurchDocMgt.ShowPurchaseOrder(Rec."Order No.");
+                end;
+            }
+            field("BVR Blanket Order No."; Rec."BVR Blanket Order No.")   //AAV.SP
+            {
+                ApplicationArea = All;
+                Editable = false;
+                ToolTip = 'Specifies the blanket purchase order the order behind this receipt was created from.';
+            }
+        }
         addfirst(factboxes)
         {
             part(BVRDocAttach; "Doc. Attachment List Factbox")

@@ -85,6 +85,19 @@ tableextension 50110 "BVR Purch Header Ext" extends "Purchase Header"
             Caption = 'Custom Invoice Number';
             DataClassification = CustomerContent;
         }
+        // Stamped by codeunit "BVR Purch Doc Mgt" when the order is created from a Blanket
+        // Purchase Order via Make Order. Held at header level because BC only tracks the blanket
+        // order per LINE ("Blanket Order No." on Purchase Line).
+        // Deliberately the same number/type as on "Purch. Rcpt. Header" (50123) so both
+        // Purch.-Post and "BVR Custom Rcpt Post V2" carry it to the posted receipt through their
+        // TransferFields call, with no extra posting code.   //AAV.SP
+        field(50123; "BVR Blanket Order No."; Code[20])
+        {
+            Caption = 'Blanket Order No.';
+            DataClassification = CustomerContent;
+            Editable = false;
+            TableRelation = "Purchase Header"."No." where("Document Type" = const("Blanket Order"));
+        }
 
     }
     /*  trigger OnInsert()

@@ -48,5 +48,15 @@ tableextension 50115 "BVR Purch Rcpt Header Ext" extends "Purch. Rcpt. Header"
             DataClassification = CustomerContent;
             Editable = false;
         }
+        // Same number and type as on "Purchase Header" (50123), so the blanket order the receipt
+        // ultimately originates from is carried here by TransferFields when the receipt is posted -
+        // by Purch.-Post for the standard flow and by "BVR Custom Rcpt Post V2" for the custom
+        // one.   //AAV.SP
+        field(50123; "BVR Blanket Order No."; Code[20])
+        {
+            Caption = 'Blanket Order No.';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
     }
 }
