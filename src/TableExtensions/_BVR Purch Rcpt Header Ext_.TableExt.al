@@ -48,6 +48,19 @@ tableextension 50115 "BVR Purch Rcpt Header Ext" extends "Purch. Rcpt. Header"
             DataClassification = CustomerContent;
             Editable = false;
         }
+        // The batch the source Warehouse Receipt was assigned to, stamped by codeunit
+        // "BVR Whse Receipt Mgt" right after the receipt is posted.
+        // 50110 is deliberately a number that does NOT exist on "Purchase Header": this value comes
+        // from the Warehouse Receipt, and if the number were shared, Purch.-Post's
+        // TransferFields(PurchHeader) would overwrite it with whatever the source PO happened to
+        // hold. Do not add 50110 to "Purchase Header".   //AAV.SP
+        field(50110; "BVR Batch No."; Code[20])
+        {
+            Caption = 'Batch No.';
+            DataClassification = CustomerContent;
+            Editable = false;
+            TableRelation = "BVR Doc Batch"."Code";
+        }
         // Same number and type as on "Purchase Header" (50123), so the blanket order the receipt
         // ultimately originates from is carried here by TransferFields when the receipt is posted -
         // by Purch.-Post for the standard flow and by "BVR Custom Rcpt Post V2" for the custom

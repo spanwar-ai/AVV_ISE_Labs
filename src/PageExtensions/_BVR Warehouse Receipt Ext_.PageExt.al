@@ -38,6 +38,15 @@ pageextension 50114 "BVR Warehouse Receipt Ext" extends "Warehouse Receipt"
                 Editable = AccrualEditable;   //AAV.SP
                 ToolTip = 'G/L account credited (Vendor Accrual / GRNI liability) when this Warehouse Receipt is posted. Editable only by the AP team while the receipt is Sent to AP Team.';
             }
+            // Same gate as the accrual accounts: AP team only, while the receipt is Sent to AP Team.
+            // The lookup allows insert, so a new batch can be created here without leaving the
+            // receipt.   //AAV.SP
+            field("BVR Batch No."; Rec."BVR Batch No.")   //AAV.SP
+            {
+                ApplicationArea = Warehouse;
+                Editable = AccrualEditable;
+                ToolTip = 'Specifies the batch this Warehouse Receipt belongs to. Choose an existing batch or create a new one from the lookup. Editable only by the AP team while the receipt is Sent to AP Team. It is carried onto the Posted Purchase Receipt when this receipt is posted.';
+            }
             field("BVR Shortcut Dimension 1 Code"; Rec."BVR Shortcut Dimension 1 Code")   //AAV.SP
             {
                 ApplicationArea = Dimensions;

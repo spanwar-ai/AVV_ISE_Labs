@@ -39,8 +39,10 @@ codeunit 50129 "BVR Whse Receipt Mgt"
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Whse.-Post Receipt", 'OnCodeOnAfterGetWhseRcptHeader', '', false, false)]
     local procedure GateAndCaptureOnPost(var WarehouseReceiptHeader: Record "Warehouse Receipt Header")
     begin
-        // Fresh per post; consumed line-by-line in StampWhseReceiptNoOnReceipt.
+        // Fresh per post; consumed line-by-line in StampWhseReceiptNoOnReceipt. Captured here rather
+        // than read back later because the WR is deleted at the end of the post.   //AAV.SP
         CurrentWhseReceiptNo := WarehouseReceiptHeader."No.";
+        CurrentBatchNo := WarehouseReceiptHeader."BVR Batch No.";   //AAV.SP
         if not IsFlowWhseReceipt(WarehouseReceiptHeader) then
             exit;
         // A flow WR can ONLY be posted once Released. This blocks Open (and Sent to AP Team / Pending
@@ -134,9 +136,12 @@ codeunit 50129 "BVR Whse Receipt Mgt"
         // this is where the posted receipt is known; for a multi-PO WR it fires once per posted
         // receipt, so each receipt carries the WR's documents. Idempotent on re-entry.   //AAV.SP
         CopyAttachments.CopyWhseReceiptAttachmentsToPosted(CurrentWhseReceiptNo, PurchRcptHeader);
-        if PurchRcptHeader."BVR Source Whse Receipt No." = CurrentWhseReceiptNo then
+        if (PurchRcptHeader."BVR Source Whse Receipt No." = CurrentWhseReceiptNo) and
+           (PurchRcptHeader."BVR Batch No." = CurrentBatchNo)
+        then
             exit;
         PurchRcptHeader."BVR Source Whse Receipt No." := CurrentWhseReceiptNo;
+        PurchRcptHeader."BVR Batch No." := CurrentBatchNo;   //AAV.SP
         PurchRcptHeader.Modify();
     end;
 
@@ -184,5 +189,6 @@ codeunit 50129 "BVR Whse Receipt Mgt"
 
     var
         CurrentWhseReceiptNo: Code[20];
+        CurrentBatchNo: Code[20];   //AAV.SP
         NotReleasedErr: Label 'Warehouse Receipt %1 must be Released before it can be posted. Complete the AP / approval flow first.', Comment = '%1 = Warehouse Receipt No.';
 }

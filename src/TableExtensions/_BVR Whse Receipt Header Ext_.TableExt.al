@@ -63,5 +63,14 @@ tableextension 50122 "BVR Whse Receipt Header Ext" extends "Warehouse Receipt He
             TableRelation = "Dimension Value".Code where("Global Dimension No." = const(2),
                                                           Blocked = const(false));
         }
+        // Set by the AP team while the receipt is Sent to AP Team, from the batch lookup (which also
+        // allows creating a new batch inline). Carried onto the Posted Purchase Receipt by codeunit
+        // "BVR Whse Receipt Mgt" when the WR posts.   //AAV.SP
+        field(50107; "BVR Batch No."; Code[20])
+        {
+            Caption = 'Batch No.';
+            DataClassification = CustomerContent;
+            TableRelation = "BVR Doc Batch"."Code";
+        }
     }
 }

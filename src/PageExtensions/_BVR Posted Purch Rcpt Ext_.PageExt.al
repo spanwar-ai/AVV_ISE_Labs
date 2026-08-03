@@ -34,6 +34,12 @@ pageextension 50116 "BVR Posted Purch Rcpt Ext" extends "Posted Purchase Receipt
                 Editable = false;
                 ToolTip = 'Specifies the blanket purchase order the order behind this receipt was created from.';
             }
+            field("BVR Batch No."; Rec."BVR Batch No.")   //AAV.SP
+            {
+                ApplicationArea = All;
+                Editable = false;
+                ToolTip = 'Specifies the batch the source Warehouse Receipt was assigned to by the AP team.';
+            }
             field("BVR Source Whse Receipt No."; Rec."BVR Source Whse Receipt No.")   //AAV
             {
                 ApplicationArea = Warehouse;
