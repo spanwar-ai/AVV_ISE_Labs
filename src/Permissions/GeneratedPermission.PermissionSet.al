@@ -25,6 +25,8 @@ permissionset 50100 GeneratedPermission
         page "BVR Inv Batch Subform" = X,
         codeunit "BVR Whse Rcpt Batch Post" = X,
         codeunit "BVR Purch Inv Batch Post" = X,
+        codeunit "BVR Gen Jnl GL Preview" = X,
+        codeunit "BVR Preview Show Doc No" = X,
         tabledata "BVR PO Line Buffer" = RIMD,
         tabledata "BVR Posting Preview Line" = RIMD,
         table "BVR PO Line Buffer" = X,
