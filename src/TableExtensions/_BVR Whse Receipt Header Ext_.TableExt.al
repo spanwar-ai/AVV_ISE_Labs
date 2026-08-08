@@ -70,7 +70,7 @@ tableextension 50122 "BVR Whse Receipt Header Ext" extends "Warehouse Receipt He
         {
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
-            TableRelation = "BVR Doc Batch"."Code";
+            TableRelation = "BVR Doc Batch"."Code" where(Type = const(Receipt), Status = const(Open));
         }
     }
 }

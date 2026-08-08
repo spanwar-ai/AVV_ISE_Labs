@@ -19,6 +19,22 @@ table 50151 "BVR Doc Batch"
         {
             Caption = 'Description';
         }
+        // One batch belongs to one document kind. The Batch No. lookups on the Warehouse Receipt and
+        // the Purchase Invoice each filter on this, so the two processes cannot pick each other's
+        // batches. Note the primary key stays "Code" alone: a batch code is unique across ALL types,
+        // so B1 is either a Receipt batch or an Invoice batch, never both.   //AAV.SP
+        field(3; Type; Enum "BVR Batch Type")
+        {
+            Caption = 'Type';
+        }
+        // Set to Closed by CloseIfComplete when the last document leaves the batch. Not editable by
+        // hand - use the Reopen action, so reopening is a deliberate act rather than a stray click.
+        //   //AAV.SP
+        field(4; Status; Enum "BVR Batch Status")
+        {
+            Caption = 'Status';
+            Editable = false;
+        }
         field(10; "No. of Whse. Receipts"; Integer)
         {
             Caption = 'No. of Warehouse Receipts';
@@ -32,6 +48,21 @@ table 50151 "BVR Doc Batch"
             Editable = false;
             FieldClass = FlowField;
             CalcFormula = count("Purch. Rcpt. Header" where("BVR Batch No." = field("Code")));
+        }
+        field(12; "No. of Purch. Invoices"; Integer)
+        {
+            Caption = 'No. of Purchase Invoices';
+            Editable = false;
+            FieldClass = FlowField;
+            CalcFormula = count("Purchase Header" where("Document Type" = const(Invoice),
+                                                         "BVR Doc Batch No." = field("Code")));
+        }
+        field(13; "No. of Posted Purch. Inv."; Integer)
+        {
+            Caption = 'No. of Posted Purchase Invoices';
+            Editable = false;
+            FieldClass = FlowField;
+            CalcFormula = count("Purch. Inv. Header" where("BVR Doc Batch No." = field("Code")));
         }
     }
 
@@ -49,4 +80,46 @@ table 50151 "BVR Doc Batch"
         {
         }
     }
+
+    // Closes the batch once nothing is left in it to post. Called at the end of a successful batch
+    // post; runs inside that same transaction, so if the batch post is rolled back the close goes
+    // with it. Returns whether it actually closed the batch.   //AAV.SP
+    procedure CloseIfComplete(): Boolean
+    var
+        WhseRcptHeader: Record "Warehouse Receipt Header";
+        PurchaseHeader: Record "Purchase Header";
+        StillHasDocuments: Boolean;
+    begin
+        if Status = Status::Closed then
+            exit(false);
+
+        case Type of
+            Type::Receipt:
+                begin
+                    WhseRcptHeader.SetRange("BVR Batch No.", "Code");
+                    StillHasDocuments := not WhseRcptHeader.IsEmpty();
+                end;
+            Type::Invoice:
+                begin
+                    PurchaseHeader.SetRange("Document Type", PurchaseHeader."Document Type"::Invoice);
+                    PurchaseHeader.SetRange("BVR Doc Batch No.", "Code");
+                    StillHasDocuments := not PurchaseHeader.IsEmpty();
+                end;
+        end;
+
+        if StillHasDocuments then
+            exit(false);
+
+        Status := Status::Closed;
+        Modify();
+        exit(true);
+    end;
+
+    procedure Reopen()
+    begin
+        if Status = Status::Open then
+            exit;
+        Status := Status::Open;
+        Modify();
+    end;
 }

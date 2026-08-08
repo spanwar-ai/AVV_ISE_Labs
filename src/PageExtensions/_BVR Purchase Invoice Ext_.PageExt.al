@@ -7,6 +7,11 @@ pageextension 50112 "BVR Purchase Invoice Ext" extends "Purchase Invoice"
     {
         addlast(General)
         {
+            field("BVR Doc Batch No."; Rec."BVR Doc Batch No.")   //AAV.SP
+            {
+                ApplicationArea = All;
+                ToolTip = 'Specifies the batch this invoice belongs to. Choose an existing Invoice batch or create a new one from the lookup. The batch is posted from the Purchase Invoice Batches page.';
+            }
             field("BVR Vendor Accrual Acc No."; Rec."BVR Vendor Accrual Acc No.")   //AAV
             {
                 ApplicationArea = All;

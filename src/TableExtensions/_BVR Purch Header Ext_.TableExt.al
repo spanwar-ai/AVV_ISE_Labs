@@ -85,6 +85,20 @@ tableextension 50110 "BVR Purch Header Ext" extends "Purchase Header"
             Caption = 'Custom Invoice Number';
             DataClassification = CustomerContent;
         }
+        // AP batch on the Purchase Invoice, assigned by the AP team and used by the Purchase Invoice
+        // Batch pages to post a batch of invoices together.
+        // NOTE: this is NOT field 50121 "BVR Batch No." above - that one is a legacy no.-series
+        // stamp written by the superseded codeunit "BVR Receipt Approval Mgt" and still shown on the
+        // custom receipt page. The two are unrelated; see the note in the batch documentation before
+        // consolidating them.
+        // Same number and type as on "Purch. Inv. Header" (50124) so Purch.-Post's
+        // TransferFields(PurchHeader) carries it onto the posted invoice.   //AAV.SP
+        field(50124; "BVR Doc Batch No."; Code[20])
+        {
+            Caption = 'Batch No.';
+            DataClassification = CustomerContent;
+            TableRelation = "BVR Doc Batch"."Code" where(Type = filter(Invoice), Status = const(Open));
+        }
         // Stamped by codeunit "BVR Purch Doc Mgt" when the order is created from a Blanket
         // Purchase Order via Make Order. Held at header level because BC only tracks the blanket
         // order per LINE ("Blanket Order No." on Purchase Line).

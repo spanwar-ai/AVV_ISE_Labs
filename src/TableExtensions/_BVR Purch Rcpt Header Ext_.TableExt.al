@@ -59,7 +59,7 @@ tableextension 50115 "BVR Purch Rcpt Header Ext" extends "Purch. Rcpt. Header"
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
             Editable = false;
-            TableRelation = "BVR Doc Batch"."Code";
+            TableRelation = "BVR Doc Batch"."Code" where(Type = const(Receipt));
         }
         // Same number and type as on "Purchase Header" (50123), so the blanket order the receipt
         // ultimately originates from is carried here by TransferFields when the receipt is posted -
