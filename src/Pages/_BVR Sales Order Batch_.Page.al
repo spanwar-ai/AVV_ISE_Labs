@@ -1,11 +1,15 @@
-page 50157 "BVR Inv Batch"
+page 50163 "BVR Sales Order Batch"
 {
-    // A batch opened "like a document": the batch is the header, the Purchase Invoices carrying its
-    // batch no. are the lines. Select lines and post them together.   //AAV.SP
+    // A batch opened "like a document": the batch is the header, the Sales Orders carrying its batch
+    // no. are the lines. Select lines and post them together.
+    //
+    // Posting an order ships AND invoices it, the same as the Post action on the order itself. An
+    // order posted only in part stays in "Sales Header", so it stays in the batch and the batch stays
+    // open - which is right: there is still something there to post.   //AAV.SP
     PageType = Document;
     SourceTable = "BVR Doc Batch";
-    SourceTableView = where(Type = const(Invoice));
-    Caption = 'Purchase Invoice Batch';
+    SourceTableView = where(Type = const("Sales Order"));
+    Caption = 'Sales Order Batch';
     ApplicationArea = All;
     UsageCategory = None;
     InsertAllowed = false;
@@ -35,15 +39,15 @@ page 50157 "BVR Inv Batch"
                     ApplicationArea = All;
                     ToolTip = 'Specifies what this batch is for.';
                 }
-                field("No. of Purch. Invoices"; Rec."No. of Purch. Invoices")
+                field("No. of Sales Orders"; Rec."No. of Sales Orders")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies how many purchase invoices are still open in this batch.';
+                    ToolTip = 'Specifies how many sales orders are still open in this batch. A number higher than the lines below means some are not released yet.';
                 }
-                field("No. of Posted Purch. Inv."; Rec."No. of Posted Purch. Inv.")
+                field("No. of Posted Sales Invoices"; Rec."No. of Posted Sales Invoices")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies how many posted purchase invoices have come out of this batch.';
+                    ToolTip = 'Specifies how many posted sales invoices have come out of this batch.';
                 }
                 field(BVRTotalAmount; BVRTotalAmount)
                 {
@@ -51,13 +55,13 @@ page 50157 "BVR Inv Batch"
                     Caption = 'Total Amount (LCY)';
                     Editable = false;
                     AutoFormatType = 1;
-                    ToolTip = 'Specifies the total value of the released purchase invoices in this batch - the sum of the Amount Including VAT column in the lines below. Invoices that are still Open are not counted, and neither are posted ones, so this figure is what the batch is about to book.';
+                    ToolTip = 'Specifies the total value of the released sales orders in this batch - the sum of the Amount Including VAT column in the lines below.';
                 }
             }
-            part(Lines; "BVR Inv Batch Subform")
+            part(Lines; "BVR Sales Order Batch Subform")
             {
                 ApplicationArea = All;
-                Caption = 'Purchase Invoices';
+                Caption = 'Sales Orders';
                 SubPageLink = "BVR Doc Batch No." = field("Code");
                 UpdatePropagation = Both;
             }
@@ -68,31 +72,31 @@ page 50157 "BVR Inv Batch"
     {
         area(processing)
         {
-            action("BVR Post Selected Invoices")
+            action("BVR Post Selected Orders")
             {
                 ApplicationArea = All;
                 Caption = 'Post Selected';
                 Image = PostDocument;
-                ToolTip = 'Post the purchase invoices selected in the lines. The batch is all or nothing: if any invoice fails, none of them are posted.';
+                ToolTip = 'Ship and invoice the sales orders selected in the lines. The batch is all or nothing: if any order fails, none of them are posted.';
 
                 trigger OnAction()
                 begin
-                    CurrPage.Lines.Page.PostSelectedInvoices();
+                    CurrPage.Lines.Page.PostSelectedDocuments();
                     RefreshBatch();
                 end;
             }
-            action("BVR Post Whole Inv Batch")
+            action("BVR Post Whole Order Batch")
             {
                 ApplicationArea = All;
                 Caption = 'Post Whole Batch';
                 Image = PostBatch;
-                ToolTip = 'Post every purchase invoice in this batch. The batch is all or nothing: a single invoice that fails any posting check stops the run and nothing is posted.';
+                ToolTip = 'Ship and invoice every released sales order in this batch. The batch is all or nothing: a single order that fails any posting check stops the run and nothing is posted.';
 
                 trigger OnAction()
                 begin
                     if not Confirm(PostWholeBatchQst, false, Rec."Code") then
                         exit;
-                    CurrPage.Lines.Page.PostAllInvoices(Rec."Code");
+                    CurrPage.Lines.Page.PostAllDocuments(Rec."Code");
                     RefreshBatch();
                 end;
             }
@@ -101,13 +105,13 @@ page 50157 "BVR Inv Batch"
         {
             group(Category_Process)
             {
-                actionref("BVR Post Selected Inv_Promoted"; "BVR Post Selected Invoices") { }
-                actionref("BVR Post Whole Inv Batch_Prom"; "BVR Post Whole Inv Batch") { }
+                actionref("BVR Post Selected Orders_Prom"; "BVR Post Selected Orders") { }
+                actionref("BVR Post Whole Order Btch_Prom"; "BVR Post Whole Order Batch") { }
             }
         }
     }
 
-    // Posted invoices leave "Purchase Header", so the batch record is re-read rather than the page
+    // Fully posted orders leave "Sales Header", so the batch record is re-read rather than the page
     // being left showing counts that no longer hold.   //AAV.SP
     local procedure RefreshBatch()
     begin
@@ -115,8 +119,6 @@ page 50157 "BVR Inv Batch"
         CurrPage.Update(false);
     end;
 
-    // CurrPage.Update in RefreshBatch re-runs this, so the total drops as posted invoices leave the
-    // batch without any extra bookkeeping.   //AAV.SP
     trigger OnAfterGetCurrRecord()
     begin
         BVRTotalAmount := Rec.CalcTotalAmount();
@@ -124,5 +126,5 @@ page 50157 "BVR Inv Batch"
 
     var
         BVRTotalAmount: Decimal;
-        PostWholeBatchQst: Label 'Post all purchase invoices in batch %1?', Comment = '%1 = batch code';
+        PostWholeBatchQst: Label 'Ship and invoice all sales orders in batch %1?', Comment = '%1 = batch code';
 }

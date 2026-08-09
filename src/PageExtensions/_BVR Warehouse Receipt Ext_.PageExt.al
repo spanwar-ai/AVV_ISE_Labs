@@ -8,6 +8,14 @@ pageextension 50114 "BVR Warehouse Receipt Ext" extends "Warehouse Receipt"
     {
         addlast(General)
         {
+            field(BVRAmount; BVRAmount)   //AAV.SP
+            {
+                ApplicationArea = Warehouse;
+                Caption = 'Amount (LCY)';
+                Editable = false;
+                AutoFormatType = 1;
+                ToolTip = 'Specifies the value of what this receipt is about to bring in: the quantity to receive on each line at the purchase order''s unit cost, less any line discount. Excludes VAT, which is not calculated until the invoice.';
+            }
             field("BVR Receipt Status"; Rec."BVR Receipt Status")   //AAV
             {
                 ApplicationArea = Warehouse;
@@ -78,6 +86,24 @@ pageextension 50114 "BVR Warehouse Receipt Ext" extends "Warehouse Receipt"
 
     actions
     {
+        // A receipt that has been put into a batch is posted from the batch, together with the rest
+        // of it - so the posting buttons on this page are switched off while a Batch No. is filled
+        // in. Clearing the Batch No. brings them back.
+        //
+        // Preview Posting is deliberately left alone: it posts nothing, and it is the most useful way
+        // to check a receipt before its batch goes.   //AAV.SP
+        modify("Post Receipt")
+        {
+            Enabled = BVRPostAllowed;
+        }
+        modify("Post and &Print")
+        {
+            Enabled = BVRPostAllowed;
+        }
+        modify("Post and Print P&ut-away")
+        {
+            Enabled = BVRPostAllowed;
+        }
         addlast(processing)
         {
             // Step 1: creator sends the receipt to the AP team. Visible only at Open.   //AAV.SP
@@ -229,10 +255,14 @@ pageextension 50114 "BVR Warehouse Receipt Ext" extends "Warehouse Receipt"
         IsAPTeamUser := ApprMgt.IsAPTeam();
         AccrualEditable := ApprMgt.AccrualAccountsEditable(Rec);
         OpenApprovalEntriesForCurrUser := ApprMgt.HasOpenApprovalEntriesForCurrentUser(Rec.RecordId);
+        BVRPostAllowed := Rec."BVR Batch No." = '';   //AAV.SP
+        BVRAmount := Rec.BVRCalcAmount();   //AAV.SP
     end;
 
     var
         AccrualEditable: Boolean;   //AAV
         IsAPTeamUser: Boolean;   //AAV.SP
         OpenApprovalEntriesForCurrUser: Boolean;   //AAV.SP
+        BVRPostAllowed: Boolean;   //AAV.SP
+        BVRAmount: Decimal;   //AAV.SP
 }

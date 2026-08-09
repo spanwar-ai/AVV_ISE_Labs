@@ -1,13 +1,13 @@
-page 50153 "BVR Rcpt Batch List"
+page 50161 "BVR Purch CrMemo Batch List"
 {
-    // Entry point for batch-wise receipt posting: pick a batch, open it as a document, post its
-    // warehouse receipts. Batch maintenance itself stays on "BVR Doc Batch List".   //AAV.SP
+    // Entry point for batch-wise credit memo posting: pick a batch, open it as a document, post its
+    // credit memos. Batch maintenance itself stays on "BVR Doc Batch List".   //AAV.SP
     PageType = List;
     SourceTable = "BVR Doc Batch";
-    Caption = 'Purchase Receipt Batches';
+    Caption = 'Purchase Credit Memo Batches';
     ApplicationArea = All;
     UsageCategory = Lists;
-    CardPageId = "BVR Rcpt Batch";
+    CardPageId = "BVR Purch CrMemo Batch";
     Editable = false;
     InsertAllowed = false;
     DeleteAllowed = false;
@@ -21,7 +21,7 @@ page 50153 "BVR Rcpt Batch List"
                 field("Code"; Rec."Code")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the batch code. Open the batch to see and post its warehouse receipts.';
+                    ToolTip = 'Specifies the batch code. Open the batch to see and post its purchase credit memos.';
                 }
                 field(Status; Rec.Status)
                 {
@@ -33,15 +33,15 @@ page 50153 "BVR Rcpt Batch List"
                     ApplicationArea = All;
                     ToolTip = 'Specifies what this batch is for.';
                 }
-                field("No. of Whse. Receipts"; Rec."No. of Whse. Receipts")
+                field("No. of Purch. Cr. Memos"; Rec."No. of Purch. Cr. Memos")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies how many warehouse receipts are still open in this batch and therefore pending posting.';
+                    ToolTip = 'Specifies how many purchase credit memos are still open in this batch and therefore pending posting.';
                 }
-                field("No. of Posted Receipts"; Rec."No. of Posted Receipts")
+                field("No. of Posted Purch. Cr.Memo"; Rec."No. of Posted Purch. Cr.Memo")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies how many posted purchase receipts have come out of this batch.';
+                    ToolTip = 'Specifies how many posted purchase credit memos have come out of this batch.';
                 }
                 field(BVRTotalAmount; BVRTotalAmount)
                 {
@@ -49,7 +49,7 @@ page 50153 "BVR Rcpt Batch List"
                     Caption = 'Total Amount (LCY)';
                     Editable = false;
                     AutoFormatType = 1;
-                    ToolTip = 'Specifies the total value of the released warehouse receipts in this batch - what it is about to book. Receipts that are not released yet are not counted, so this can be less than the batch holds.';
+                    ToolTip = 'Specifies the total value of the released purchase credit memos in this batch - what it is about to book.';
                 }
             }
         }
@@ -59,21 +59,21 @@ page 50153 "BVR Rcpt Batch List"
     {
         area(processing)
         {
-            action("BVR Open Batch")
+            action("BVR Open CrMemo Batch")
             {
                 ApplicationArea = All;
                 Caption = 'Open Batch';
                 Image = Document;
-                RunObject = page "BVR Rcpt Batch";
+                RunObject = page "BVR Purch CrMemo Batch";
                 RunPageLink = "Code" = field("Code");
-                ToolTip = 'Open the batch to review and post the warehouse receipts linked to it.';
+                ToolTip = 'Open the batch to review and post the purchase credit memos linked to it.';
             }
         }
         area(Promoted)
         {
             group(Category_Process)
             {
-                actionref("BVR Open Batch_Promoted"; "BVR Open Batch") { }
+                actionref("BVR Open CrMemo Batch_Promoted"; "BVR Open CrMemo Batch") { }
             }
         }
     }
@@ -85,13 +85,10 @@ page 50153 "BVR Rcpt Batch List"
     trigger OnOpenPage()
     begin
         Rec.FilterGroup(2);
-        Rec.SetRange(Type, Rec.Type::Receipt);
+        Rec.SetRange(Type, Rec.Type::"Purch. Credit Memo");
         Rec.FilterGroup(0);
     end;
 
-    // Totalled per row rather than held on the batch, so it can never disagree with the receipts it
-    // is adding up. The cost is a read of each receipt's lines per row - fine at AP batch volumes.
-    //   //AAV.SP
     trigger OnAfterGetRecord()
     begin
         BVRTotalAmount := Rec.CalcTotalAmount();

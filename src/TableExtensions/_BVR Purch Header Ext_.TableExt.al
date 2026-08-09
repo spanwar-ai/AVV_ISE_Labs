@@ -93,11 +93,16 @@ tableextension 50110 "BVR Purch Header Ext" extends "Purchase Header"
         // consolidating them.
         // Same number and type as on "Purch. Inv. Header" (50124) so Purch.-Post's
         // TransferFields(PurchHeader) carries it onto the posted invoice.   //AAV.SP
+        // One field serves both document types. The relation is conditional on "Document Type", so an
+        // invoice can only be put in an Invoice batch and a credit memo only in a Credit Memo batch -
+        // the lookup itself enforces it, with no validation code to keep in step.   //AAV.SP
         field(50124; "BVR Doc Batch No."; Code[20])
         {
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
-            TableRelation = "BVR Doc Batch"."Code" where(Type = filter(Invoice), Status = const(Open));
+            TableRelation = if ("Document Type" = const(Invoice)) "BVR Doc Batch"."Code" where(Type = const(Invoice), Status = const(Open))
+            else
+            if ("Document Type" = const("Credit Memo")) "BVR Doc Batch"."Code" where(Type = const("Purch. Credit Memo"), Status = const(Open));
         }
         // Stamped by codeunit "BVR Purch Doc Mgt" when the order is created from a Blanket
         // Purchase Order via Make Order. Held at header level because BC only tracks the blanket

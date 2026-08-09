@@ -11,6 +11,18 @@ enum 50148 "BVR Batch Type"
     }
     value(1; Invoice)
     {
-        Caption = 'Invoice';
+        Caption = 'Purchase Invoice';
+    }
+    value(2; "Purch. Credit Memo")
+    {
+        Caption = 'Purchase Credit Memo';
+    }
+    value(3; "Sales Order")
+    {
+        Caption = 'Sales Order';
+    }
+    value(4; "Sales Credit Memo")
+    {
+        Caption = 'Sales Credit Memo';
     }
 }

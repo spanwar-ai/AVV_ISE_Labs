@@ -4,7 +4,6 @@ page 50156 "BVR Inv Batch List"
     // invoices. Batch maintenance itself stays on "BVR Doc Batch List".   //AAV.SP
     PageType = List;
     SourceTable = "BVR Doc Batch";
-    SourceTableView = where(Type = const(Invoice));
     Caption = 'Purchase Invoice Batches';
     ApplicationArea = All;
     UsageCategory = Lists;
@@ -44,6 +43,14 @@ page 50156 "BVR Inv Batch List"
                     ApplicationArea = All;
                     ToolTip = 'Specifies how many posted purchase invoices have come out of this batch.';
                 }
+                field(BVRTotalAmount; BVRTotalAmount)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Total Amount (LCY)';
+                    Editable = false;
+                    AutoFormatType = 1;
+                    ToolTip = 'Specifies the total value of the released purchase invoices in this batch - what it is about to book. Invoices that are still Open are not counted, so this can be less than the batch holds.';
+                }
             }
         }
     }
@@ -70,4 +77,25 @@ page 50156 "BVR Inv Batch List"
             }
         }
     }
+
+    // Filter group 2 instead of SourceTableView. As SourceTableView the Type filter showed in the
+    // filter pane as a removable chip, and clearing it turned this list into every batch in the
+    // system - including other document types. Group 2 filters are not shown, so they cannot be
+    // removed.   //AAV.SP
+    trigger OnOpenPage()
+    begin
+        Rec.FilterGroup(2);
+        Rec.SetRange(Type, Rec.Type::Invoice);
+        Rec.FilterGroup(0);
+    end;
+
+    // Totalled per row rather than held on the batch, so it can never disagree with the invoices it
+    // is adding up.   //AAV.SP
+    trigger OnAfterGetRecord()
+    begin
+        BVRTotalAmount := Rec.CalcTotalAmount();
+    end;
+
+    var
+        BVRTotalAmount: Decimal;
 }

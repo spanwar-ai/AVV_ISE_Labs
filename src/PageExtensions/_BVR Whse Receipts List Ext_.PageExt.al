@@ -15,4 +15,30 @@ pageextension 50139 "BVR Whse Receipts List Ext" extends "Warehouse Receipts"
             }
         }
     }
+
+    actions
+    {
+        // Same rule as the card: a receipt in a batch is posted from its batch, so the posting
+        // buttons are off while a Batch No. is filled in. Preview Posting stays available.   //AAV.SP
+        modify("Post Receipt")
+        {
+            Enabled = BVRPostAllowed;
+        }
+        modify("Post and Print")
+        {
+            Enabled = BVRPostAllowed;
+        }
+        modify("Post and Print Put-away")
+        {
+            Enabled = BVRPostAllowed;
+        }
+    }
+
+    trigger OnAfterGetCurrRecord()
+    begin
+        BVRPostAllowed := Rec."BVR Batch No." = '';   //AAV.SP
+    end;
+
+    var
+        BVRPostAllowed: Boolean;   //AAV.SP
 }

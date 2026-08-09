@@ -1,15 +1,16 @@
 codeunit 50149 "BVR Purch Inv Batch Post"
 {
-    // Posts every selected Purchase Invoice of a batch as ONE all-or-nothing unit: if any invoice
-    // fails, nothing is posted. Invoice counterpart of "BVR Whse Rcpt Batch Post" - see that
-    // codeunit for the full rationale.
+    // Posts every selected purchase document of a batch as ONE all-or-nothing unit: if any document
+    // fails, nothing is posted. Serves both Purchase Invoice and Purchase Credit Memo batches - the
+    // two differ only in the posting flags, which are read from the document itself. Counterpart of
+    // "BVR Whse Rcpt Batch Post" - see that codeunit for the full rationale.
     //
     // No Commit in the loop, and SetSuppressCommit on "Purch.-Post" so the base routine does not
-    // make each invoice durable as it goes. The first failure raises an error naming the invoice,
+    // make each document durable as it goes. The first failure raises an error naming the document,
     // which unwinds the whole transaction.
     //
-    // TableNo is "Purchase Header" so this codeunit can run ITSELF once per invoice: that is what
-    // lets us report WHICH invoice broke while still applying SetSuppressCommit to the instance that
+    // TableNo is "Purchase Header" so this codeunit can run ITSELF once per document: that is what
+    // lets us report WHICH document broke while still applying SetSuppressCommit to the instance that
     // actually posts.   //AAV.SP
     TableNo = "Purchase Header";
 
@@ -17,45 +18,50 @@ codeunit 50149 "BVR Purch Inv Batch Post"
     var
         PurchPost: Codeunit "Purch.-Post";
     begin
-        // The batch is atomic - nothing may become durable until every invoice has succeeded.
+        // The batch is atomic - nothing may become durable until every document has succeeded.
         PurchPost.SetSuppressCommit(true);
-        Rec.Receive := true;
+        // Exactly how "Purch.-Post (Yes/No)" sets them, so a batched document posts on the same terms
+        // as one posted from its own page. A credit memo receives nothing and ships nothing; it is
+        // invoiced only.
+        Rec.Ship := Rec."Document Type" = Rec."Document Type"::"Return Order";
+        Rec.Receive := Rec."Document Type" = Rec."Document Type"::Order;
         Rec.Invoice := true;
         PurchPost.Run(Rec);
     end;
 
-    procedure PostInvoices(var PurchaseHeader: Record "Purchase Header")
+    procedure PostDocuments(var PurchaseHeader: Record "Purchase Header")
     var
+        TempDocToPost: Record "Purchase Header" temporary;
         PurchHeaderToPost: Record "Purchase Header";
         SelfPost: Codeunit "BVR Purch Inv Batch Post";
-        InvoiceNos: List of [Code[20]];
-        InvoiceNo: Code[20];
         BatchCodes: List of [Code[20]];
         PostedCount: Integer;
     begin
-        // Snapshot first: a posted invoice is deleted from "Purchase Header", so iterating the
-        // recordset would walk a cursor over rows disappearing underneath it.
+        // Snapshot first: a posted document is deleted from "Purchase Header", so iterating the
+        // recordset would walk a cursor over rows disappearing underneath it. The snapshot keeps the
+        // Document Type as well as the number, so invoices and credit memos can both be re-read.
         if PurchaseHeader.FindSet() then
             repeat
-                InvoiceNos.Add(PurchaseHeader."No.");
-                // Remembered now: the invoice - and with it the batch no. - is gone after posting.
+                TempDocToPost := PurchaseHeader;
+                TempDocToPost.Insert();
+                // Remembered now: the document - and with it the batch no. - is gone after posting.
                 if (PurchaseHeader."BVR Doc Batch No." <> '') and not BatchCodes.Contains(PurchaseHeader."BVR Doc Batch No.") then
                     BatchCodes.Add(PurchaseHeader."BVR Doc Batch No.");
             until PurchaseHeader.Next() = 0;
 
-        if InvoiceNos.Count() = 0 then
+        if not TempDocToPost.FindSet() then
             Error(NothingSelectedErr);
 
-        foreach InvoiceNo in InvoiceNos do begin
-            if not PurchHeaderToPost.Get(PurchHeaderToPost."Document Type"::Invoice, InvoiceNo) then
-                Error(BatchRolledBackErr, InvoiceNo, GoneErr);
+        repeat
+            if not PurchHeaderToPost.Get(TempDocToPost."Document Type", TempDocToPost."No.") then
+                Error(BatchRolledBackErr, TempDocToPost."No.", GoneErr);
 
             Clear(SelfPost);
             if not SelfPost.Run(PurchHeaderToPost) then
-                Error(BatchRolledBackErr, InvoiceNo, GetLastErrorText());
+                Error(BatchRolledBackErr, TempDocToPost."No.", GetLastErrorText());
 
             PostedCount += 1;
-        end;
+        until TempDocToPost.Next() = 0;
 
         CloseCompletedBatches(BatchCodes, PostedCount);
     end;
@@ -80,9 +86,9 @@ codeunit 50149 "BVR Purch Inv Batch Post"
     end;
 
     var
-        NothingSelectedErr: Label 'Select at least one purchase invoice to post.';
-        GoneErr: Label 'The purchase invoice no longer exists.';
-        AllPostedMsg: Label '%1 purchase invoice(s) posted.', Comment = '%1 = number of invoices posted';
-        PostedAndClosedMsg: Label '%1 purchase invoice(s) posted.\%2 batch(es) had no documents left and have been closed.', Comment = '%1 = number of invoices posted, %2 = number of batches closed';
-        BatchRolledBackErr: Label 'Batch posting stopped at purchase invoice %1:\%2\\No invoices have been posted - the whole batch was rolled back. Correct the problem and post the batch again.', Comment = '%1 = purchase invoice no., %2 = the underlying posting error';
+        NothingSelectedErr: Label 'Select at least one purchase document to post.';
+        GoneErr: Label 'The purchase document no longer exists.';
+        AllPostedMsg: Label '%1 purchase document(s) posted.', Comment = '%1 = number of documents posted';
+        PostedAndClosedMsg: Label '%1 purchase document(s) posted.\%2 batch(es) had no documents left and have been closed.', Comment = '%1 = number of documents posted, %2 = number of batches closed';
+        BatchRolledBackErr: Label 'Batch posting stopped at purchase document %1:\%2\\Nothing has been posted - the whole batch was rolled back. Correct the problem and post the batch again.', Comment = '%1 = purchase document no., %2 = the underlying posting error';
 }

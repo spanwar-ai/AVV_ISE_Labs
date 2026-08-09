@@ -45,6 +45,14 @@ page 50154 "BVR Rcpt Batch"
                     ApplicationArea = All;
                     ToolTip = 'Specifies how many posted purchase receipts have come out of this batch.';
                 }
+                field(BVRTotalAmount; BVRTotalAmount)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Total Amount (LCY)';
+                    Editable = false;
+                    AutoFormatType = 1;
+                    ToolTip = 'Specifies the total value of the released warehouse receipts in this batch - the sum of the Amount column in the lines below. Receipts that are not released yet are not counted, and neither are posted ones, so this figure is what the batch is about to book.';
+                }
             }
             part(Lines; "BVR Rcpt Batch Subform")
             {
@@ -84,7 +92,7 @@ page 50154 "BVR Rcpt Batch"
                 begin
                     if not Confirm(PostWholeBatchQst, false, Rec."Code") then
                         exit;
-                    CurrPage.Lines.Page.PostAllReceipts();
+                    CurrPage.Lines.Page.PostAllReceipts(Rec."Code");
                     RefreshBatch();
                 end;
             }
@@ -107,6 +115,14 @@ page 50154 "BVR Rcpt Batch"
         CurrPage.Update(false);
     end;
 
+    // CurrPage.Update in RefreshBatch re-runs this, so the total drops as posted receipts leave the
+    // batch without any extra bookkeeping.   //AAV.SP
+    trigger OnAfterGetCurrRecord()
+    begin
+        BVRTotalAmount := Rec.CalcTotalAmount();
+    end;
+
     var
+        BVRTotalAmount: Decimal;
         PostWholeBatchQst: Label 'Post all warehouse receipts in batch %1?', Comment = '%1 = batch code';
 }

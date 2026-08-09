@@ -1,7 +1,12 @@
 page 50155 "BVR Rcpt Batch Subform"
 {
-    // The "lines" of a receipt batch: every open Warehouse Receipt carrying this batch no. Rows are
-    // multi-selectable, and the parent page posts whatever is selected.   //AAV.SP
+    // The "lines" of a receipt batch: the RELEASED Warehouse Receipts carrying this batch no. Rows are
+    // multi-selectable, and the parent page posts whatever is selected.
+    //
+    // Released only, because this is a posting screen - a receipt still working its way through the AP
+    // flow cannot be posted, and listing it here would only invite a click that ends in an error. The
+    // "No. of Warehouse Receipts" count on the header still counts every receipt in the batch, so a
+    // count higher than the number of lines is the sign that some are not released yet.   //AAV.SP
     PageType = ListPart;
     SourceTable = "Warehouse Receipt Header";
     Caption = 'Warehouse Receipts';
@@ -42,6 +47,14 @@ page 50155 "BVR Rcpt Batch Subform"
                     ApplicationArea = All;
                     ToolTip = 'Specifies whether the receipt is partially or completely received.';
                 }
+                field(BVRAmount; BVRAmount)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Amount (LCY)';
+                    Editable = false;
+                    AutoFormatType = 1;
+                    ToolTip = 'Specifies the value of this receipt: the quantity to receive on each line at the purchase order''s unit cost, less any line discount. These are the figures the batch total adds up.';
+                }
                 field("Assigned User ID"; Rec."Assigned User ID")
                 {
                     ApplicationArea = All;
@@ -77,6 +90,25 @@ page 50155 "BVR Rcpt Batch Subform"
         }
     }
 
+    trigger OnAfterGetRecord()
+    begin
+        BVRAmount := Rec.BVRCalcAmount();
+    end;
+
+    var
+        BVRAmount: Decimal;
+
+    // Filter group 2, not SourceTableView. As SourceTableView these showed in the filter pane as
+    // removable chips, and clearing them would list documents this screen cannot post - unreleased
+    // ones, or the wrong document type entirely. Group 2 filters are not shown and cannot be cleared.
+    //   //AAV.SP
+    trigger OnOpenPage()
+    begin
+        Rec.FilterGroup(2);
+        Rec.SetRange("BVR Receipt Status", Rec."BVR Receipt Status"::Released);
+        Rec.FilterGroup(0);
+    end;
+
     procedure PostSelectedReceipts()
     var
         WhseRcptHeader: Record "Warehouse Receipt Header";
@@ -86,12 +118,17 @@ page 50155 "BVR Rcpt Batch Subform"
         BatchPost.PostReceipts(WhseRcptHeader);
     end;
 
-    procedure PostAllReceipts()
+    // Takes the batch code from the parent rather than copying the page's filters. "Post the whole
+    // batch" has to mean exactly the rows on screen, and the filters that define them now live in
+    // filter group 2 - restating them here removes any dependence on which groups CopyFilters carries.
+    //   //AAV.SP
+    procedure PostAllReceipts(BatchCode: Code[20])
     var
         WhseRcptHeader: Record "Warehouse Receipt Header";
         BatchPost: Codeunit "BVR Whse Rcpt Batch Post";
     begin
-        WhseRcptHeader.CopyFilters(Rec);
+        WhseRcptHeader.SetRange("BVR Batch No.", BatchCode);
+        WhseRcptHeader.SetRange("BVR Receipt Status", WhseRcptHeader."BVR Receipt Status"::Released);
         BatchPost.PostReceipts(WhseRcptHeader);
     end;
 }

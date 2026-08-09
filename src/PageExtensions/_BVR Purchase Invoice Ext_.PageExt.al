@@ -5,6 +5,13 @@ pageextension 50112 "BVR Purchase Invoice Ext" extends "Purchase Invoice"
     // Accrual account, so standard posting books Dr Vendor Accrual / Cr Vendor.   //AAV
     layout
     {
+        // Already on the page, just hidden by Microsoft. What is typed here ends up as the
+        // description on the vendor ledger entry and the G/L entries the invoice posts, so AP wants
+        // it in front of them while they enter the invoice, not buried behind Show More.   //AAV.SP
+        modify("Posting Description")
+        {
+            Visible = true;
+        }
         addlast(General)
         {
             field("BVR Doc Batch No."; Rec."BVR Doc Batch No.")   //AAV.SP
@@ -29,6 +36,28 @@ pageextension 50112 "BVR Purchase Invoice Ext" extends "Purchase Invoice"
 
     actions
     {
+        // An invoice that has been put into a batch is posted from the batch, together with the rest
+        // of it - so the posting buttons on this page are switched off while a Batch No. is filled
+        // in. Clearing the Batch No. brings them back.
+        //
+        // Preview Posting is deliberately left alone: it posts nothing, and it is the most useful way
+        // to check an invoice before its batch goes.   //AAV.SP
+        modify(Post)
+        {
+            Enabled = BVRPostAllowed;
+        }
+        modify(PostAndPrint)
+        {
+            Enabled = BVRPostAllowed;
+        }
+        modify(PostAndNew)
+        {
+            Enabled = BVRPostAllowed;
+        }
+        modify(PostBatch)
+        {
+            Enabled = BVRPostAllowed;
+        }
         addlast(processing)
         {
             action("BVR Get Receipt Lines Accrual")                                               //AAV
@@ -52,4 +81,12 @@ pageextension 50112 "BVR Purchase Invoice Ext" extends "Purchase Invoice"
             actionref("BVR Get Receipt Lines Accrual_Promoted"; "BVR Get Receipt Lines Accrual") { }   //AAV
         }
     }
+
+    trigger OnAfterGetCurrRecord()
+    begin
+        BVRPostAllowed := Rec."BVR Doc Batch No." = '';   //AAV.SP
+    end;
+
+    var
+        BVRPostAllowed: Boolean;   //AAV.SP
 }

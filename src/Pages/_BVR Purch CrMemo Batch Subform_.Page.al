@@ -1,14 +1,15 @@
-page 50158 "BVR Inv Batch Subform"
+page 50159 "BVR Purch CrMemo Batch Subform"
 {
-    // The "lines" of an invoice batch: the RELEASED Purchase Invoices carrying this batch no. Rows are
-    // multi-selectable, and the parent page posts whatever is selected.
+    // The "lines" of a purchase credit memo batch: the RELEASED credit memos carrying this batch no.
+    // Rows are multi-selectable, and the parent page posts whatever is selected.
     //
-    // Released only, because this is a posting screen - an Open invoice is still being worked on. The
-    // "No. of Purchase Invoices" count on the header still counts every invoice in the batch, so a
-    // count higher than the number of lines is the sign that some are not released yet.   //AAV.SP
+    // Released only, because this is a posting screen - a credit memo still being worked on cannot be
+    // posted. The "No. of Purchase Credit Memos" count on the header still counts every one in the
+    // batch, so a count higher than the number of lines is the sign that some are not released yet.
+    //   //AAV.SP
     PageType = ListPart;
     SourceTable = "Purchase Header";
-    Caption = 'Purchase Invoices';
+    Caption = 'Purchase Credit Memos';
     ApplicationArea = All;
     Editable = false;
     InsertAllowed = false;
@@ -24,42 +25,37 @@ page 50158 "BVR Inv Batch Subform"
                 field("No."; Rec."No.")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the purchase invoice number.';
-                }
-                field(Status; Rec.Status)
-                {
-                    ApplicationArea = All;
-                    ToolTip = 'Specifies whether the invoice is Open or Released.';
+                    ToolTip = 'Specifies the purchase credit memo number.';
                 }
                 field("Buy-from Vendor No."; Rec."Buy-from Vendor No.")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the vendor the invoice is from.';
+                    ToolTip = 'Specifies the vendor the credit memo is for.';
                 }
                 field("Buy-from Vendor Name"; Rec."Buy-from Vendor Name")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the name of the vendor the invoice is from.';
+                    ToolTip = 'Specifies the name of the vendor the credit memo is for.';
                 }
-                field("Vendor Invoice No."; Rec."Vendor Invoice No.")
+                field("Vendor Cr. Memo No."; Rec."Vendor Cr. Memo No.")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the vendor''s own invoice number.';
+                    ToolTip = 'Specifies the vendor''s own credit memo number.';
                 }
                 field("Posting Date"; Rec."Posting Date")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the posting date of the invoice.';
+                    ToolTip = 'Specifies the posting date of the credit memo.';
                 }
                 field("Amount Including VAT"; Rec."Amount Including VAT")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the total amount of the invoice including VAT.';
+                    ToolTip = 'Specifies the total amount of the credit memo including VAT. These are the figures the batch total adds up.';
                 }
                 field("Currency Code"; Rec."Currency Code")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the currency of the invoice.';
+                    ToolTip = 'Specifies the currency of the credit memo.';
                 }
             }
         }
@@ -69,14 +65,14 @@ page 50158 "BVR Inv Batch Subform"
     {
         area(processing)
         {
-            action("BVR Open Purch Invoice")
+            action("BVR Open Purch Cr Memo")
             {
                 ApplicationArea = All;
-                Caption = 'Open Purchase Invoice';
+                Caption = 'Open Purchase Credit Memo';
                 Image = Document;
-                RunObject = page "Purchase Invoice";
+                RunObject = page "Purchase Credit Memo";
                 RunPageLink = "Document Type" = field("Document Type"), "No." = field("No.");
-                ToolTip = 'Open the selected purchase invoice to review it before posting.';
+                ToolTip = 'Open the selected purchase credit memo to review it before posting.';
             }
         }
     }
@@ -88,12 +84,12 @@ page 50158 "BVR Inv Batch Subform"
     trigger OnOpenPage()
     begin
         Rec.FilterGroup(2);
-        Rec.SetRange("Document Type", Rec."Document Type"::Invoice);
+        Rec.SetRange("Document Type", Rec."Document Type"::"Credit Memo");
         Rec.SetRange(Status, Rec.Status::Released);
         Rec.FilterGroup(0);
     end;
 
-    procedure PostSelectedInvoices()
+    procedure PostSelectedDocuments()
     var
         PurchaseHeader: Record "Purchase Header";
         BatchPost: Codeunit "BVR Purch Inv Batch Post";
@@ -106,12 +102,12 @@ page 50158 "BVR Inv Batch Subform"
     // batch" has to mean exactly the rows on screen, and the filters that define them now live in
     // filter group 2 - restating them here removes any dependence on which groups CopyFilters carries.
     //   //AAV.SP
-    procedure PostAllInvoices(BatchCode: Code[20])
+    procedure PostAllDocuments(BatchCode: Code[20])
     var
         PurchaseHeader: Record "Purchase Header";
         BatchPost: Codeunit "BVR Purch Inv Batch Post";
     begin
-        PurchaseHeader.SetRange("Document Type", PurchaseHeader."Document Type"::Invoice);
+        PurchaseHeader.SetRange("Document Type", PurchaseHeader."Document Type"::"Credit Memo");
         PurchaseHeader.SetRange("BVR Doc Batch No.", BatchCode);
         PurchaseHeader.SetRange(Status, PurchaseHeader.Status::Released);
         BatchPost.PostDocuments(PurchaseHeader);

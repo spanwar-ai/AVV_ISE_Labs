@@ -73,4 +73,57 @@ tableextension 50122 "BVR Whse Receipt Header Ext" extends "Warehouse Receipt He
             TableRelation = "BVR Doc Batch"."Code" where(Type = const(Receipt), Status = const(Open));
         }
     }
+
+    // What this receipt is about to bring in, in LCY.
+    //
+    // Calculated rather than stored. A Warehouse Receipt holds no amounts of its own - its lines
+    // carry quantities only - so the value has to be read from the purchase lines behind them:
+    // Qty. to Receive at the order's unit cost, less any line discount. Storing it would mean
+    // keeping a field in step with every line insert, quantity change and deletion; reading it on
+    // demand cannot go stale.
+    //
+    // Only Purchase Order lines count. A receipt line from any other source document has no purchase
+    // amount to read, and is passed over rather than guessed at.
+    //
+    // Converted to LCY per source order, so that a batch total holds up when its orders are in
+    // different currencies.   //AAV.SP
+    procedure BVRCalcAmount(): Decimal
+    var
+        WhseRcptLine: Record "Warehouse Receipt Line";
+        PurchLine: Record "Purchase Line";
+        PurchHeader: Record "Purchase Header";
+        CurrExchRate: Record "Currency Exchange Rate";
+        LineAmount: Decimal;
+        Total: Decimal;
+        ConversionDate: Date;
+    begin
+        WhseRcptLine.SetRange("No.", Rec."No.");
+        WhseRcptLine.SetRange("Source Document", WhseRcptLine."Source Document"::"Purchase Order");
+        if not WhseRcptLine.FindSet() then
+            exit(0);
+
+        repeat
+            if PurchLine.Get(PurchLine."Document Type"::Order, WhseRcptLine."Source No.", WhseRcptLine."Source Line No.") then begin
+                LineAmount := Round(
+                    PurchLine."Direct Unit Cost" * WhseRcptLine."Qty. to Receive" *
+                    (1 - PurchLine."Line Discount %" / 100));
+
+                if PurchLine."Currency Code" <> '' then
+                    if PurchHeader.Get(PurchHeader."Document Type"::Order, PurchLine."Document No.") then begin
+                        // A blank posting date would make the exchange-rate lookup fail; the order is
+                        // not posted yet, so today's rate is the honest stand-in.
+                        ConversionDate := PurchHeader."Posting Date";
+                        if ConversionDate = 0D then
+                            ConversionDate := WorkDate();
+                        LineAmount := Round(
+                            CurrExchRate.ExchangeAmtFCYToLCY(
+                                ConversionDate, PurchHeader."Currency Code", LineAmount, PurchHeader."Currency Factor"));
+                    end;
+
+                Total += LineAmount;
+            end;
+        until WhseRcptLine.Next() = 0;
+
+        exit(Total);
+    end;
 }
