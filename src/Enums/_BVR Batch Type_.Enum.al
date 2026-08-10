@@ -9,7 +9,7 @@ enum 50148 "BVR Batch Type"
     {
         Caption = 'Receipt';
     }
-    value(1; Invoice)
+    value(1; "Purchase Invoice")
     {
         Caption = 'Purchase Invoice';
     }

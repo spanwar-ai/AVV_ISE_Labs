@@ -11,7 +11,7 @@
       <am:Name>PBIRB</am:Name>
       <am:Version>15.7.1813.16</am:Version>
     </am:UpdatedBy>
-    <am:LastModifiedTimestamp>2026-08-09T09:58:10.8577727Z</am:LastModifiedTimestamp>
+    <am:LastModifiedTimestamp>2026-08-09T15:45:57.3763158Z</am:LastModifiedTimestamp>
   </am:AuthoringMetadata>
   <AutoRefresh>0</AutoRefresh>
   <DataSources>
@@ -2894,7 +2894,9 @@
                                       </TablixCell>
                                       <TablixCell>
                                         <CellContents>
+                                          <rd:Selected>true</rd:Selected>
                                           <Textbox Name="GenJournalLineDescription">
+                                            <CanGrow>true</CanGrow>
                                             <KeepTogether>true</KeepTogether>
                                             <Paragraphs>
                                               <Paragraph>
@@ -2912,6 +2914,9 @@
                                             </Paragraphs>
                                             <ZIndex>39</ZIndex>
                                             <Style>
+                                              <Border>
+                                                <Style>None</Style>
+                                              </Border>
                                               <BackgroundColor>=iif(Code.GetRowColor() = TRUE, "#EBEBEB", "White")</BackgroundColor>
                                               <VerticalAlign>Middle</VerticalAlign>
                                               <PaddingLeft>2pt</PaddingLeft>
@@ -5761,7 +5766,7 @@
         <Height>11.72107cm</Height>
         <Style />
       </Body>
-      <Width>780pt</Width>
+      <Width>780.00009pt</Width>
       <Page>
         <PageHeader>
           <Height>2.32833cm</Height>

@@ -63,7 +63,7 @@ codeunit 50153 "BVR Sales Batch Post"
             PostedCount += 1;
         until TempDocToPost.Next() = 0;
 
-        CloseCompletedBatches(BatchCodes, PostedCount);
+        CloseCompletedBatches(TempDocToPost."Document Type", BatchCodes, PostedCount);
     end;
 
     // A batch whose last document has just posted is closed, which also takes it out of the Batch No.
@@ -71,16 +71,24 @@ codeunit 50153 "BVR Sales Batch Post"
     //
     // A Sales Order posted with a partial quantity stays in "Sales Header", so it stays in the batch
     // and the batch stays open - which is right: there is still something there to post.   //AAV.SP
-    local procedure CloseCompletedBatches(BatchCodes: List of [Code[20]]; PostedCount: Integer)
+    //
+    // Credit memos only. Sales ORDERS are no longer batched here - the sales side batches the
+    // Warehouse Shipment instead, which "BVR Whse Shpt Batch Post" handles. The document type is
+    // still taken as a parameter so a future sales document type cannot silently close the wrong
+    // register.   //AAV.SP
+    local procedure CloseCompletedBatches(DocType: Enum "Sales Document Type"; BatchCodes: List of [Code[20]]; PostedCount: Integer)
     var
-        DocBatch: Record "BVR Doc Batch";
+        CrMemoBatch: Record "BVR Sales CrMemo Batch";
         BatchCode: Code[20];
         ClosedCount: Integer;
     begin
         foreach BatchCode in BatchCodes do
-            if DocBatch.Get(BatchCode) then
-                if DocBatch.CloseIfComplete() then
-                    ClosedCount += 1;
+            case DocType of
+                DocType::"Credit Memo":
+                    if CrMemoBatch.Get(BatchCode) then
+                        if CrMemoBatch.CloseIfComplete() then
+                            ClosedCount += 1;
+            end;
 
         if ClosedCount > 0 then
             Message(PostedAndClosedMsg, PostedCount, ClosedCount)

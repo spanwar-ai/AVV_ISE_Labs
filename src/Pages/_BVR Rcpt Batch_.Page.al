@@ -3,8 +3,7 @@ page 50154 "BVR Rcpt Batch"
     // A batch opened "like a document": the batch itself is the header, and the Warehouse Receipts
     // carrying its batch no. are the lines. Select lines and post them together.   //AAV.SP
     PageType = Document;
-    SourceTable = "BVR Doc Batch";
-    SourceTableView = where(Type = const(Receipt));
+    SourceTable = "BVR Purch Rcpt Batch";
     Caption = 'Purchase Receipt Batch';
     ApplicationArea = All;
     UsageCategory = None;

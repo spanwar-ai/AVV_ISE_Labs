@@ -3,8 +3,7 @@ page 50166 "BVR Sales CrMemo Batch"
     // A batch opened "like a document": the batch is the header, the Sales Credit Memos carrying its
     // batch no. are the lines. Select lines and post them together.   //AAV.SP
     PageType = Document;
-    SourceTable = "BVR Doc Batch";
-    SourceTableView = where(Type = const("Sales Credit Memo"));
+    SourceTable = "BVR Sales CrMemo Batch";
     Caption = 'Sales Credit Memo Batch';
     ApplicationArea = All;
     UsageCategory = None;

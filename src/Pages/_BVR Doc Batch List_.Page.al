@@ -7,7 +7,10 @@ page 50152 "BVR Doc Batch List"
     SourceTable = "BVR Doc Batch";
     Caption = 'Document Batches';
     ApplicationArea = All;
-    UsageCategory = Lists;
+    // Off the search menu: the per-process lists have replaced it. Reachable only through the
+    // obsolete table it shows, so the original batches can still be inspected.   //AAV.SP
+    UsageCategory = None;
+
 
     layout
     {

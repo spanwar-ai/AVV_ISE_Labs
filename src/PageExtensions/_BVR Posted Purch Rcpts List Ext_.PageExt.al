@@ -36,6 +36,11 @@ pageextension 50137 "BVR Posted Purch Rcpts List" extends "Posted Purchase Recei
                 Editable = false;
                 ToolTip = 'Specifies the batch the source Warehouse Receipt was assigned to by the AP team.';
             }
+            field("BVR Source Whse Receipt No."; Rec."BVR Source Whse Receipt No.") //AAV.SP
+            {
+                ApplicationArea = All;
+                Editable = false;
+            }
         }
         addfirst(factboxes)
         {

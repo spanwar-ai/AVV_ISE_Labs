@@ -3,8 +3,7 @@ page 50157 "BVR Inv Batch"
     // A batch opened "like a document": the batch is the header, the Purchase Invoices carrying its
     // batch no. are the lines. Select lines and post them together.   //AAV.SP
     PageType = Document;
-    SourceTable = "BVR Doc Batch";
-    SourceTableView = where(Type = const(Invoice));
+    SourceTable = "BVR Purch Inv Batch";
     Caption = 'Purchase Invoice Batch';
     ApplicationArea = All;
     UsageCategory = None;

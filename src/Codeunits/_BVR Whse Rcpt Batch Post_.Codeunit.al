@@ -70,7 +70,7 @@ codeunit 50147 "BVR Whse Rcpt Batch Post"
     // lookups. Inside the same transaction as the post, so a rollback undoes the close too.   //AAV.SP
     local procedure CloseCompletedBatches(BatchCodes: List of [Code[20]]; PostedCount: Integer)
     var
-        DocBatch: Record "BVR Doc Batch";
+        DocBatch: Record "BVR Purch Rcpt Batch";
         BatchCode: Code[20];
         ClosedCount: Integer;
     begin

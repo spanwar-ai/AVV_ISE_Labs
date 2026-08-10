@@ -47,44 +47,10 @@ pageextension 50140 "BVR Purch Cr Memo Ext" extends "Purchase Credit Memo"
         BVRPostAllowed: Boolean;
 }
 
-pageextension 50141 "BVR Sales Order Ext" extends "Sales Order"
-{
-    layout
-    {
-        addlast(General)
-        {
-            field("BVR Doc Batch No."; Rec."BVR Doc Batch No.")
-            {
-                ApplicationArea = All;
-                ToolTip = 'Specifies the batch this order belongs to. Only Sales Order batches can be chosen. The batch is shipped and invoiced from the Sales Order Batches page.';
-            }
-        }
-    }
-
-    actions
-    {
-        modify(Post)
-        {
-            Enabled = BVRPostAllowed;
-        }
-        modify(PostAndNew)
-        {
-            Enabled = BVRPostAllowed;
-        }
-        modify(PostAndSend)
-        {
-            Enabled = BVRPostAllowed;
-        }
-    }
-
-    trigger OnAfterGetCurrRecord()
-    begin
-        BVRPostAllowed := Rec."BVR Doc Batch No." = '';
-    end;
-
-    var
-        BVRPostAllowed: Boolean;
-}
+// The Sales Order is deliberately NOT extended here. Sales shipments are batched on the WAREHOUSE
+// SHIPMENT, mirroring how the purchase side batches the Warehouse Receipt rather than the purchase
+// order - so the order keeps its own Post button and carries no batch of its own. See
+// "BVR Whse Shipment Page Ext" for the shipment side.   //AAV.SP
 
 pageextension 50142 "BVR Sales Cr Memo Ext" extends "Sales Credit Memo"
 {

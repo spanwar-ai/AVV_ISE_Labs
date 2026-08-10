@@ -66,11 +66,35 @@ tableextension 50122 "BVR Whse Receipt Header Ext" extends "Warehouse Receipt He
         // Set by the AP team while the receipt is Sent to AP Team, from the batch lookup (which also
         // allows creating a new batch inline). Carried onto the Posted Purchase Receipt by codeunit
         // "BVR Whse Receipt Mgt" when the WR posts.   //AAV.SP
+        //
+        // ValidateTableRelation is OFF so an unknown code reaches OnValidate, which offers to create
+        // the batch rather than erroring - see "BVR Batch Doc Mgt".   //AAV.SP
         field(50107; "BVR Batch No."; Code[20])
         {
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
-            TableRelation = "BVR Doc Batch"."Code" where(Type = const(Receipt), Status = const(Open));
+            ValidateTableRelation = false;
+            TableRelation = "BVR Purch Rcpt Batch"."Code" where(Status = const(Open));
+
+            trigger OnValidate()
+            var
+                BatchDocMgt: Codeunit "BVR Batch Doc Mgt";
+            begin
+                BatchDocMgt.CheckOrCreateWhseRcptBatch("BVR Batch No.");
+            end;
+        }
+        // Typed on the Warehouse Receipt and pushed onto the source Purchase Order(s) just before the
+        // receipt posts, by codeunit "BVR Whse Receipt Mgt" - it lands in the order's STANDARD
+        // "Posting Description", which "Purch. Rcpt. Header" also holds at field 22. Purch.-Post
+        // copies the two with TransferFields, so it reaches the Posted Purchase Receipt with no
+        // posting code of ours at all, and shows there under its normal caption.
+        //
+        // Text[100] to match "Posting Description" exactly; anything longer would be silently cut off
+        // on the way through.   //AAV.SP
+        field(50108; "BVR Posting Description"; Text[100])
+        {
+            Caption = 'Posting Description';
+            DataClassification = CustomerContent;
         }
     }
 

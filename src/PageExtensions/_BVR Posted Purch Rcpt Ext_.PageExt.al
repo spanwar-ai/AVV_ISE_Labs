@@ -13,6 +13,16 @@ pageextension 50116 "BVR Posted Purch Rcpt Ext" extends "Posted Purchase Receipt
         }
         addafter("Order No.")
         {
+            // The standard field, carried here from the Warehouse Receipt: it is set on the source
+            // order by codeunit "BVR Whse Receipt Mgt" before posting, and Purch.-Post's
+            // TransferFields brings it across - "Posting Description" is field 22 on both tables.
+            // Microsoft leaves it off this page, so it is added rather than unhidden.   //AAV.SP
+            field("Posting Description"; Rec."Posting Description")
+            {
+                ApplicationArea = All;
+                Editable = false;
+                ToolTip = 'Specifies the posting description this receipt was posted with. It comes from the Posting Description on the warehouse receipt, when one was entered there.';
+            }
             field("BVR Order No."; Rec."Order No.")   //AAV.SP
             {
                 ApplicationArea = All;

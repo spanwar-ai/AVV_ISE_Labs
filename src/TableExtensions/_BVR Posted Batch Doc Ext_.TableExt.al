@@ -17,7 +17,7 @@ tableextension 50124 "BVR Purch CrMemo Hdr Ext" extends "Purch. Cr. Memo Hdr."
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
             Editable = false;
-            TableRelation = "BVR Doc Batch"."Code" where(Type = const("Purch. Credit Memo"));
+            TableRelation = "BVR Purch CrMemo Batch"."Code";
         }
     }
 }
@@ -26,12 +26,19 @@ tableextension 50125 "BVR Sales Invoice Hdr Ext" extends "Sales Invoice Header"
 {
     fields
     {
+        // Superseded, along with the sales-order batch it came from. The sales batch is now held on
+        // the Warehouse Shipment, so a posted sales invoice has no batch to inherit - and could not
+        // have one anyway, since an invoice can combine shipments out of several different batches.
+        // The batch is shown on the Posted Sales Shipment instead.
+        //
+        // Kept rather than dropped so any value already written survives.   //AAV.SP
         field(50124; "BVR Doc Batch No."; Code[20])
         {
-            Caption = 'Batch No.';
+            Caption = 'Batch No. (old)';
             DataClassification = CustomerContent;
             Editable = false;
-            TableRelation = "BVR Doc Batch"."Code" where(Type = const("Sales Order"));
+            ObsoleteState = Pending;
+            ObsoleteReason = 'The sales batch is held on the Warehouse Shipment and reported on the Posted Sales Shipment.';
         }
     }
 }
@@ -42,12 +49,26 @@ tableextension 50126 "BVR Sales Shpt Hdr Ext" extends "Sales Shipment Header"
 {
     fields
     {
-        field(50124; "BVR Doc Batch No."; Code[20])
+        // Field 50110, matching "BVR Batch No." on "Purch. Rcpt. Header", and deliberately NOT 50124.
+        // The batch lives on the WAREHOUSE SHIPMENT, not on the sales order, so there is nothing for
+        // Sales-Post's TransferFields to carry - codeunit "BVR Whse Shipment Mgt" stamps it as each
+        // shipment is created. Reusing 50124 would let the sales order's own batch field overwrite it.
+        field(50110; "BVR Batch No."; Code[20])
         {
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
             Editable = false;
-            TableRelation = "BVR Doc Batch"."Code" where(Type = const("Sales Order"));
+            TableRelation = "BVR Sales Shpt Batch"."Code";
+        }
+        // Superseded by 50110 above, when the sales batch moved from the order to the warehouse
+        // shipment. Kept rather than dropped so any value already written survives.   //AAV.SP
+        field(50124; "BVR Doc Batch No."; Code[20])
+        {
+            Caption = 'Batch No. (old)';
+            DataClassification = CustomerContent;
+            Editable = false;
+            ObsoleteState = Pending;
+            ObsoleteReason = 'The sales batch is now held on the Warehouse Shipment; use "BVR Batch No." (50110).';
         }
     }
 }
@@ -61,7 +82,7 @@ tableextension 50127 "BVR Sales CrMemo Hdr Ext" extends "Sales Cr.Memo Header"
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
             Editable = false;
-            TableRelation = "BVR Doc Batch"."Code" where(Type = const("Sales Credit Memo"));
+            TableRelation = "BVR Sales CrMemo Batch"."Code";
         }
     }
 }

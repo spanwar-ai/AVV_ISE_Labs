@@ -1,15 +1,21 @@
 page 50156 "BVR Inv Batch List"
 {
+    // Doubles as the lookup behind Batch No. on the document, so Insert is allowed: the team can
+    // create a batch straight from the lookup rather than having to leave the document first.
     // Entry point for batch-wise invoice posting: pick a batch, open it as a document, post its
     // invoices. Batch maintenance itself stays on "BVR Doc Batch List".   //AAV.SP
     PageType = List;
-    SourceTable = "BVR Doc Batch";
+    SourceTable = "BVR Purch Inv Batch";
     Caption = 'Purchase Invoice Batches';
     ApplicationArea = All;
     UsageCategory = Lists;
-    CardPageId = "BVR Inv Batch";
-    Editable = false;
-    InsertAllowed = false;
+    // No CardPageId on purpose. The lookup behind Batch No. on the document offers a New line,
+    // and with a CardPageId set that New opens the batch CARD - a document page whose lines are
+    // linked on the batch code, so a not-yet-typed code would link to blank and list every
+    // unbatched document in the company. Without it, New adds a row here instead, which is all a
+    // batch needs: a code and a description. Use Open Batch to open one.   //AAV.SP
+    Editable = true;
+    InsertAllowed = true;
     DeleteAllowed = false;
 
     layout
@@ -59,6 +65,23 @@ page 50156 "BVR Inv Batch List"
     {
         area(processing)
         {
+            // A batch closes itself when its last document posts. Reopening is the way back if a
+            // posting was undone, or if the team simply needs to add more documents to it.   //AAV.SP
+            action("BVR Reopen")
+            {
+                ApplicationArea = All;
+                Caption = 'Reopen';
+                Image = ReOpen;
+                Enabled = Rec.Status = Rec.Status::Closed;
+                ToolTip = 'Reopen a closed batch so it can be assigned to documents again.';
+
+                trigger OnAction()
+                begin
+                    Rec.Reopen();
+                    CurrPage.Update(false);
+                end;
+            }
+
             action("BVR Open Inv Batch")
             {
                 ApplicationArea = All;
@@ -77,17 +100,6 @@ page 50156 "BVR Inv Batch List"
             }
         }
     }
-
-    // Filter group 2 instead of SourceTableView. As SourceTableView the Type filter showed in the
-    // filter pane as a removable chip, and clearing it turned this list into every batch in the
-    // system - including other document types. Group 2 filters are not shown, so they cannot be
-    // removed.   //AAV.SP
-    trigger OnOpenPage()
-    begin
-        Rec.FilterGroup(2);
-        Rec.SetRange(Type, Rec.Type::Invoice);
-        Rec.FilterGroup(0);
-    end;
 
     // Totalled per row rather than held on the batch, so it can never disagree with the invoices it
     // is adding up.   //AAV.SP

@@ -63,21 +63,33 @@ codeunit 50149 "BVR Purch Inv Batch Post"
             PostedCount += 1;
         until TempDocToPost.Next() = 0;
 
-        CloseCompletedBatches(BatchCodes, PostedCount);
+        CloseCompletedBatches(TempDocToPost."Document Type", BatchCodes, PostedCount);
     end;
 
     // A batch whose last document has just posted is closed, which also takes it out of the Batch No.
     // lookups. Inside the same transaction as the post, so a rollback undoes the close too.   //AAV.SP
-    local procedure CloseCompletedBatches(BatchCodes: List of [Code[20]]; PostedCount: Integer)
+    //
+    // The document type decides WHICH batch table to close. Invoices and credit memos now keep their
+    // batches in separate tables, and the same code can exist on both - closing the wrong one would
+    // shut a batch that still has documents in it.   //AAV.SP
+    local procedure CloseCompletedBatches(DocType: Enum "Purchase Document Type"; BatchCodes: List of [Code[20]]; PostedCount: Integer)
     var
-        DocBatch: Record "BVR Doc Batch";
+        InvBatch: Record "BVR Purch Inv Batch";
+        CrMemoBatch: Record "BVR Purch CrMemo Batch";
         BatchCode: Code[20];
         ClosedCount: Integer;
     begin
         foreach BatchCode in BatchCodes do
-            if DocBatch.Get(BatchCode) then
-                if DocBatch.CloseIfComplete() then
-                    ClosedCount += 1;
+            case DocType of
+                DocType::Invoice:
+                    if InvBatch.Get(BatchCode) then
+                        if InvBatch.CloseIfComplete() then
+                            ClosedCount += 1;
+                DocType::"Credit Memo":
+                    if CrMemoBatch.Get(BatchCode) then
+                        if CrMemoBatch.CloseIfComplete() then
+                            ClosedCount += 1;
+            end;
 
         if ClosedCount > 0 then
             Message(PostedAndClosedMsg, PostedCount, ClosedCount)

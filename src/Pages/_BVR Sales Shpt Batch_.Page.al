@@ -1,15 +1,14 @@
-page 50163 "BVR Sales Order Batch"
+page 50163 "BVR Sales Shpt Batch"
 {
-    // A batch opened "like a document": the batch is the header, the Sales Orders carrying its batch
-    // no. are the lines. Select lines and post them together.
+    // A batch opened "like a document": the batch is the header, the Warehouse Shipments carrying its
+    // batch no. are the lines. Select lines and post them together.
     //
-    // Posting an order ships AND invoices it, the same as the Post action on the order itself. An
-    // order posted only in part stays in "Sales Header", so it stays in the batch and the batch stays
-    // open - which is right: there is still something there to post.   //AAV.SP
+    // The sales mirror of the receipt batch: it batches the WAREHOUSE SHIPMENT, not the sales order,
+    // and posting it produces the Posted Sales Shipments the batch then reports on. A shipment posted
+    // only in part stays put, so it stays in the batch and the batch stays open.   //AAV.SP
     PageType = Document;
-    SourceTable = "BVR Doc Batch";
-    SourceTableView = where(Type = const("Sales Order"));
-    Caption = 'Sales Order Batch';
+    SourceTable = "BVR Sales Shpt Batch";
+    Caption = 'Sales Shipment Batch';
     ApplicationArea = All;
     UsageCategory = None;
     InsertAllowed = false;
@@ -39,15 +38,15 @@ page 50163 "BVR Sales Order Batch"
                     ApplicationArea = All;
                     ToolTip = 'Specifies what this batch is for.';
                 }
-                field("No. of Sales Orders"; Rec."No. of Sales Orders")
+                field("No. of Whse. Shipments"; Rec."No. of Whse. Shipments")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies how many sales orders are still open in this batch. A number higher than the lines below means some are not released yet.';
+                    ToolTip = 'Specifies how many warehouse shipments are still in this batch. A number higher than the lines below means some are not released yet.';
                 }
-                field("No. of Posted Sales Invoices"; Rec."No. of Posted Sales Invoices")
+                field("No. of Posted Sales Shpts."; Rec."No. of Posted Sales Shpts.")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies how many posted sales invoices have come out of this batch.';
+                    ToolTip = 'Specifies how many posted sales shipments have come out of this batch.';
                 }
                 field(BVRTotalAmount; BVRTotalAmount)
                 {
@@ -55,14 +54,14 @@ page 50163 "BVR Sales Order Batch"
                     Caption = 'Total Amount (LCY)';
                     Editable = false;
                     AutoFormatType = 1;
-                    ToolTip = 'Specifies the total value of the released sales orders in this batch - the sum of the Amount Including VAT column in the lines below.';
+                    ToolTip = 'Specifies the total value of the released warehouse shipments in this batch - the sum of the Amount column in the lines below.';
                 }
             }
-            part(Lines; "BVR Sales Order Batch Subform")
+            part(Lines; "BVR Sales Shpt Batch Subform")
             {
                 ApplicationArea = All;
-                Caption = 'Sales Orders';
-                SubPageLink = "BVR Doc Batch No." = field("Code");
+                Caption = 'Warehouse Shipments';
+                SubPageLink = "BVR Batch No." = field("Code");
                 UpdatePropagation = Both;
             }
         }
@@ -77,7 +76,7 @@ page 50163 "BVR Sales Order Batch"
                 ApplicationArea = All;
                 Caption = 'Post Selected';
                 Image = PostDocument;
-                ToolTip = 'Ship and invoice the sales orders selected in the lines. The batch is all or nothing: if any order fails, none of them are posted.';
+                ToolTip = 'Post the warehouse shipments selected in the lines. The batch is all or nothing: if any shipment fails, none of them are posted.';
 
                 trigger OnAction()
                 begin
@@ -90,7 +89,7 @@ page 50163 "BVR Sales Order Batch"
                 ApplicationArea = All;
                 Caption = 'Post Whole Batch';
                 Image = PostBatch;
-                ToolTip = 'Ship and invoice every released sales order in this batch. The batch is all or nothing: a single order that fails any posting check stops the run and nothing is posted.';
+                ToolTip = 'Post every released warehouse shipment in this batch. The batch is all or nothing: a single shipment that fails any posting check stops the run and nothing is posted.';
 
                 trigger OnAction()
                 begin
@@ -111,7 +110,7 @@ page 50163 "BVR Sales Order Batch"
         }
     }
 
-    // Fully posted orders leave "Sales Header", so the batch record is re-read rather than the page
+    // Fully posted shipments are deleted, so the batch record is re-read rather than the page
     // being left showing counts that no longer hold.   //AAV.SP
     local procedure RefreshBatch()
     begin
@@ -126,5 +125,5 @@ page 50163 "BVR Sales Order Batch"
 
     var
         BVRTotalAmount: Decimal;
-        PostWholeBatchQst: Label 'Ship and invoice all sales orders in batch %1?', Comment = '%1 = batch code';
+        PostWholeBatchQst: Label 'Post all warehouse shipments in batch %1?', Comment = '%1 = batch code';
 }

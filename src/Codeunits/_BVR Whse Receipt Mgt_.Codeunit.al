@@ -79,9 +79,13 @@ codeunit 50129 "BVR Whse Receipt Mgt"
         WarehouseReceiptLine: Record "Warehouse Receipt Line";
         PurchaseHeader: Record "Purchase Header";
     begin
+        // The posting description belongs in this test too. Without it, a receipt that carries nothing
+        // but a description would bail out here and the description would never reach the order - or
+        // the posted receipt.   //AAV.SP
         if (WarehouseReceiptHeader."BVR Vendor Accrual Acc No." = '') and
            (WarehouseReceiptHeader."BVR Expense Accrual Acc No." = '') and
-           (WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code" = '')
+           (WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code" = '') and
+           (WarehouseReceiptHeader."BVR Posting Description" = '')   //AAV.SP
         //          (WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code" = '')
         then
             exit;
@@ -107,7 +111,8 @@ codeunit 50129 "BVR Whse Receipt Mgt"
     begin
         if (PurchaseHeader."BVR Vendor Accrual Acc No." = WarehouseReceiptHeader."BVR Vendor Accrual Acc No.") and
            (PurchaseHeader."BVR Expense Accrual Acc No." = WarehouseReceiptHeader."BVR Expense Accrual Acc No.") and
-           (PurchaseHeader."BVR WH Shortcut Dim 1 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code")
+           (PurchaseHeader."BVR WH Shortcut Dim 1 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code") and
+           (PurchaseHeader."Posting Description" = WarehouseReceiptHeader."BVR Posting Description")   //AAV.SP
         //   (PurchaseHeader."BVR WH Shortcut Dim 2 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code")
         then
             exit;
@@ -115,6 +120,14 @@ codeunit 50129 "BVR Whse Receipt Mgt"
         PurchaseHeader."BVR Expense Accrual Acc No." := WarehouseReceiptHeader."BVR Expense Accrual Acc No.";
         PurchaseHeader."BVR WH Shortcut Dim 1 Code" := WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code";
         PurchaseHeader."BVR WH Shortcut Dim 2 Code" := WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code";
+        // The order's STANDARD "Posting Description", not one of ours: that is the field Purch.-Post
+        // carries onto the posted receipt, and the one that describes the entries this posting books.
+        //
+        // Only overwritten when the receipt actually carries a description. Left blank on the WR, the
+        // order keeps whatever it already had - which for most orders is the vendor name that BC put
+        // there, and blanking that would make the ledger entries harder to read, not easier.   //AAV.SP
+        if WarehouseReceiptHeader."BVR Posting Description" <> '' then
+            PurchaseHeader."Posting Description" := WarehouseReceiptHeader."BVR Posting Description";
         PurchaseHeader.Modify();
     end;
 

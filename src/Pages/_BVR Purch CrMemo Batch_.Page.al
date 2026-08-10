@@ -3,8 +3,7 @@ page 50160 "BVR Purch CrMemo Batch"
     // A batch opened "like a document": the batch is the header, the Purchase Credit Memos carrying
     // its batch no. are the lines. Select lines and post them together.   //AAV.SP
     PageType = Document;
-    SourceTable = "BVR Doc Batch";
-    SourceTableView = where(Type = const("Purch. Credit Memo"));
+    SourceTable = "BVR Purch CrMemo Batch";
     Caption = 'Purchase Credit Memo Batch';
     ApplicationArea = All;
     UsageCategory = None;

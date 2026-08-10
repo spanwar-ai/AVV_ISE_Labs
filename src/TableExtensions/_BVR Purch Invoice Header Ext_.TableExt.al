@@ -26,7 +26,7 @@ tableextension 50120 "BVR Purch Invoice Header Ext" extends "Purch. Inv. Header"
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
             Editable = false;
-            TableRelation = "BVR Doc Batch"."Code" where(Type = const(Invoice));
+            TableRelation = "BVR Purch Inv Batch"."Code";
         }
     }
 }

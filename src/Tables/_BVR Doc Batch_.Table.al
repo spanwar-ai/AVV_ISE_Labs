@@ -3,6 +3,16 @@ table 50151 "BVR Doc Batch"
     // User-named batch that groups documents for AP review, in the spirit of a General Journal
     // Batch. The AP team assigns one to a Warehouse Receipt; it is carried onto the resulting
     // Posted Purchase Receipt when the WR posts (codeunit "BVR Whse Receipt Mgt").   //AAV.SP
+    // SUPERSEDED. Each batch process now keeps its own table - "BVR Purch Rcpt Batch",
+    // "BVR Purch Inv Batch", "BVR Purch CrMemo Batch", "BVR Sales Order Batch" and
+    // "BVR Sales CrMemo Batch" - so a batch code means one thing on one table and there is no Type
+    // field to keep in step.
+    //
+    // Kept, not deleted, and its rows are copied rather than moved by codeunit
+    // "BVR Batch Split Upgrade". Dropping the table would take the original batches with it, and they
+    // are the only record of what the split was built from.   //AAV.SP
+    ObsoleteState = Pending;
+    ObsoleteReason = 'Replaced by one table per batch process. Rows are copied across by codeunit "BVR Batch Split Upgrade".';
     Caption = 'Document Batch';
     DataClassification = CustomerContent;
     LookupPageId = "BVR Doc Batch List";
@@ -148,7 +158,7 @@ table 50151 "BVR Doc Batch"
                     WhseRcptHeader.SetRange("BVR Batch No.", "Code");
                     StillHasDocuments := not WhseRcptHeader.IsEmpty();
                 end;
-            Type::Invoice, Type::"Purch. Credit Memo":
+            Type::"Purchase Invoice", Type::"Purch. Credit Memo":
                 begin
                     FilterPurchaseDocs(PurchaseHeader);
                     StillHasDocuments := not PurchaseHeader.IsEmpty();
@@ -197,7 +207,7 @@ table 50151 "BVR Doc Batch"
                             Total += WhseRcptHeader.BVRCalcAmount();
                         until WhseRcptHeader.Next() = 0;
                 end;
-            Type::Invoice, Type::"Purch. Credit Memo":
+            Type::"Purchase Invoice", Type::"Purch. Credit Memo":
                 begin
                     FilterPurchaseDocs(PurchaseHeader);
                     PurchaseHeader.SetRange(Status, PurchaseHeader.Status::Released);

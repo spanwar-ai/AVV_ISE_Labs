@@ -24,35 +24,35 @@ table 50152 "BVR Batch Cue"
             Caption = 'Purchase Receipt Batches';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = count("BVR Doc Batch" where(Type = const(Receipt), Status = const(Open)));
+            CalcFormula = count("BVR Purch Rcpt Batch" where(Status = const(Open)));
         }
         field(11; "Purchase Invoice Batches"; Integer)
         {
             Caption = 'Purchase Invoice Batches';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = count("BVR Doc Batch" where(Type = const(Invoice), Status = const(Open)));
+            CalcFormula = count("BVR Purch Inv Batch" where(Status = const(Open)));
         }
         field(12; "Purchase Cr. Memo Batches"; Integer)
         {
             Caption = 'Purchase Credit Memo Batches';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = count("BVR Doc Batch" where(Type = const("Purch. Credit Memo"), Status = const(Open)));
+            CalcFormula = count("BVR Purch CrMemo Batch" where(Status = const(Open)));
         }
-        field(13; "Sales Order Batches"; Integer)
+        field(13; "Sales Shipment Batches"; Integer)
         {
-            Caption = 'Sales Order Batches';
+            Caption = 'Sales Shipment Batches';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = count("BVR Doc Batch" where(Type = const("Sales Order"), Status = const(Open)));
+            CalcFormula = count("BVR Sales Shpt Batch" where(Status = const(Open)));
         }
         field(14; "Sales Cr. Memo Batches"; Integer)
         {
             Caption = 'Sales Credit Memo Batches';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = count("BVR Doc Batch" where(Type = const("Sales Credit Memo"), Status = const(Open)));
+            CalcFormula = count("BVR Sales CrMemo Batch" where(Status = const(Open)));
         }
         // Documents actually waiting on someone. A batch with nothing released in it is open but idle,
         // so the batch tiles alone cannot tell a manager whether there is work to do - these can.
@@ -74,12 +74,23 @@ table 50152 "BVR Batch Cue"
                                                          "BVR Doc Batch No." = filter(<> ''),
                                                          Status = const(Released)));
         }
-        field(22; "Sales Documents to Post"; Integer)
+        // The sales counterpart of "Whse. Receipts to Post". Without it the sales half of the process
+        // had no waiting-to-post tile at all: shipments are batched on the Warehouse Shipment, and the
+        // credit memo count below cannot see them.   //AAV.SP
+        field(23; "Whse. Shipments to Post"; Integer)
         {
-            Caption = 'Sales Documents to Post';
+            Caption = 'Warehouse Shipments to Post';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = count("Sales Header" where("Document Type" = filter(Order | "Credit Memo"),
+            CalcFormula = count("Warehouse Shipment Header" where("BVR Batch No." = filter(<> ''),
+                                                                   Status = const(Released)));
+        }
+        field(22; "Sales Documents to Post"; Integer)
+        {
+            Caption = 'Sales Credit Memos to Post';
+            Editable = false;
+            FieldClass = FlowField;
+            CalcFormula = count("Sales Header" where("Document Type" = const("Credit Memo"),
                                                       "BVR Doc Batch No." = filter(<> ''),
                                                       Status = const(Released)));
         }

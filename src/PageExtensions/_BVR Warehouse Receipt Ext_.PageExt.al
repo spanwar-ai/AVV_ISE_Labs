@@ -8,6 +8,11 @@ pageextension 50114 "BVR Warehouse Receipt Ext" extends "Warehouse Receipt"
     {
         addlast(General)
         {
+            field("BVR Posting Description"; Rec."BVR Posting Description")   //AAV.SP
+            {
+                ApplicationArea = Warehouse;
+                ToolTip = 'Specifies the description carried onto the posted purchase receipt and the entries it books. Left blank, the purchase order keeps whatever description it already has.';
+            }
             field(BVRAmount; BVRAmount)   //AAV.SP
             {
                 ApplicationArea = Warehouse;

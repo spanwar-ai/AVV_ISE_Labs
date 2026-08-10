@@ -96,13 +96,25 @@ tableextension 50110 "BVR Purch Header Ext" extends "Purchase Header"
         // One field serves both document types. The relation is conditional on "Document Type", so an
         // invoice can only be put in an Invoice batch and a credit memo only in a Credit Memo batch -
         // the lookup itself enforces it, with no validation code to keep in step.   //AAV.SP
+        // ValidateTableRelation is OFF on purpose. The automatic check errors on a code that does not
+        // exist yet, which leaves no room to offer to create it - so the check is made by hand in
+        // OnValidate instead, which asks first and rejects the value if the answer is no. The relation
+        // is still what drives the lookup.   //AAV.SP
         field(50124; "BVR Doc Batch No."; Code[20])
         {
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
-            TableRelation = if ("Document Type" = const(Invoice)) "BVR Doc Batch"."Code" where(Type = const(Invoice), Status = const(Open))
+            ValidateTableRelation = false;
+            TableRelation = if ("Document Type" = const(Invoice)) "BVR Purch Inv Batch"."Code" where(Status = const(Open))
             else
-            if ("Document Type" = const("Credit Memo")) "BVR Doc Batch"."Code" where(Type = const("Purch. Credit Memo"), Status = const(Open));
+            if ("Document Type" = const("Credit Memo")) "BVR Purch CrMemo Batch"."Code" where(Status = const(Open));
+
+            trigger OnValidate()
+            var
+                BatchDocMgt: Codeunit "BVR Batch Doc Mgt";
+            begin
+                BatchDocMgt.CheckOrCreatePurchBatch("Document Type", "BVR Doc Batch No.");
+            end;
         }
         // Stamped by codeunit "BVR Purch Doc Mgt" when the order is created from a Blanket
         // Purchase Order via Make Order. Held at header level because BC only tracks the blanket
