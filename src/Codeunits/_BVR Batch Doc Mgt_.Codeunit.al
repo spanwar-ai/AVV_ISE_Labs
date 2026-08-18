@@ -1,6 +1,6 @@
 codeunit 50154 "BVR Batch Doc Mgt"
 {
-    // Shared behaviour for the five batch tables.
+    // Shared behaviour for the four batch tables.
     //
     // Each batch process now has its own table, so a batch code means one thing on one table and the
     // tables carry no Type field. What they DO share is how a batch is valued and when it is finished,
@@ -19,35 +19,6 @@ codeunit 50154 "BVR Batch Doc Mgt"
             repeat
                 Total += WhseRcptHeader.BVRCalcAmount();
             until WhseRcptHeader.Next() = 0;
-    end;
-
-    procedure WhseShptTotal(BatchCode: Code[20]) Total: Decimal
-    var
-        WhseShptHeader: Record "Warehouse Shipment Header";
-    begin
-        FilterWhseShpts(WhseShptHeader, BatchCode, true);
-        if WhseShptHeader.FindSet() then
-            repeat
-                Total += WhseShptHeader.BVRCalcAmount();
-            until WhseShptHeader.Next() = 0;
-    end;
-
-    procedure WhseShptBatchIsEmpty(BatchCode: Code[20]): Boolean
-    var
-        WhseShptHeader: Record "Warehouse Shipment Header";
-    begin
-        FilterWhseShpts(WhseShptHeader, BatchCode, false);
-        exit(WhseShptHeader.IsEmpty());
-    end;
-
-    // Released, not the AP receipt status: a Warehouse Shipment carries BC's own Open/Released status,
-    // and only a Released one can be posted.   //AAV.SP
-    procedure FilterWhseShpts(var WhseShptHeader: Record "Warehouse Shipment Header"; BatchCode: Code[20]; ReleasedOnly: Boolean)
-    begin
-        WhseShptHeader.Reset();
-        WhseShptHeader.SetRange("BVR Batch No.", BatchCode);
-        if ReleasedOnly then
-            WhseShptHeader.SetRange(Status, WhseShptHeader.Status::Released);
     end;
 
     procedure PurchDocTotal(DocType: Enum "Purchase Document Type"; BatchCode: Code[20]) Total: Decimal
@@ -175,13 +146,23 @@ codeunit 50154 "BVR Batch Doc Mgt"
 
     procedure CheckOrCreateSalesBatch(DocType: Enum "Sales Document Type"; BatchCode: Code[20])
     var
+        InvBatch: Record "BVR Sales Inv Batch";
         CrMemoBatch: Record "BVR Sales CrMemo Batch";
     begin
         if BatchCode = '' then
             exit;
 
-        // Credit memos only. Sales shipments are batched on the Warehouse Shipment, not the order.
+        // Only the two document types that are batched, mirroring the purchase side.
         case DocType of
+            DocType::Invoice:
+                if InvBatch.Get(BatchCode) then
+                    CheckOpen(InvBatch.Status, BatchCode)
+                else
+                    if CreateConfirmed(BatchCode) then begin
+                        InvBatch.Init();
+                        InvBatch."Code" := BatchCode;
+                        InvBatch.Insert(true);
+                    end;
             DocType::"Credit Memo":
                 if CrMemoBatch.Get(BatchCode) then
                     CheckOpen(CrMemoBatch.Status, BatchCode)
@@ -210,25 +191,6 @@ codeunit 50154 "BVR Batch Doc Mgt"
             RcptBatch.Init();
             RcptBatch."Code" := BatchCode;
             RcptBatch.Insert(true);
-        end;
-    end;
-
-    procedure CheckOrCreateWhseShptBatch(BatchCode: Code[20])
-    var
-        ShptBatch: Record "BVR Sales Shpt Batch";
-    begin
-        if BatchCode = '' then
-            exit;
-
-        if ShptBatch.Get(BatchCode) then begin
-            CheckOpen(ShptBatch.Status, BatchCode);
-            exit;
-        end;
-
-        if CreateConfirmed(BatchCode) then begin
-            ShptBatch.Init();
-            ShptBatch."Code" := BatchCode;
-            ShptBatch.Insert(true);
         end;
     end;
 

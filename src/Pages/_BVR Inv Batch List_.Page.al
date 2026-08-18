@@ -39,6 +39,11 @@ page 50156 "BVR Inv Batch List"
                     ApplicationArea = All;
                     ToolTip = 'Specifies what this batch is for.';
                 }
+                field("Posting Date"; Rec."Posting Date")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Specifies the date every document in this batch will post on. Set it and the batch posts as one accounting event, whatever dates the individual documents carry. Leave it blank and each document keeps its own posting date.';
+                }
                 field("No. of Purch. Invoices"; Rec."No. of Purch. Invoices")
                 {
                     ApplicationArea = All;
@@ -92,11 +97,38 @@ page 50156 "BVR Inv Batch List"
                 ToolTip = 'Open the batch to review and post the purchase invoices linked to it.';
             }
         }
+        area(reporting)
+        {
+            // Printed from the list rather than only from inside a batch, so a whole run of batches
+            // can go out in one report. Rows selected in the list are what gets printed; with
+            // nothing selected it is the row the cursor is on.   //AAV.SP
+            action("BVR Print Batch Edit List")
+            {
+                ApplicationArea = All;
+                Caption = 'Print Edit List';
+                Image = PrintReport;
+                ToolTip = 'Print the selected batches: every invoice in each one, the lines behind each invoice, and the G/L distribution it will book when the batch is posted. Print this before posting - it exists to be read while there is still something to correct.';
+
+                trigger OnAction()
+                var
+                    InvBatch: Record "BVR Purch Inv Batch";
+                begin
+                    CurrPage.SetSelectionFilter(InvBatch);
+                    if InvBatch.IsEmpty() then
+                        exit;
+                    Report.Run(Report::"BVR Purch Inv Batch Report", true, false, InvBatch);
+                end;
+            }
+        }
         area(Promoted)
         {
             group(Category_Process)
             {
                 actionref("BVR Open Inv Batch_Promoted"; "BVR Open Inv Batch") { }
+            }
+            group(Category_Report)
+            {
+                actionref("BVR Print Batch Edit List_Prom"; "BVR Print Batch Edit List") { }
             }
         }
     }

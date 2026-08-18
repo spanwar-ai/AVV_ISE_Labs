@@ -92,6 +92,7 @@ codeunit 50124 "BVR Undo Receipt Accrual"
         GenJnlLine: Record "Gen. Journal Line";
         GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
         DimMgt: Codeunit DimensionManagement;
+        StdRcptAccrual: Codeunit "BVR Std Rcpt Accrual";
     begin
         if RcptLine."BVR Accrued Amount" = 0 then
             exit;
@@ -127,6 +128,10 @@ codeunit 50124 "BVR Undo Receipt Accrual"
             GenJnlLine.Validate("Shortcut Dimension 1 Code", RcptHdr."BVR WH Shortcut Dim 1 Code");
         if RcptHdr."BVR WH Shortcut Dim 2 Code" <> '' then
             GenJnlLine.Validate("Shortcut Dimension 2 Code", RcptHdr."BVR WH Shortcut Dim 2 Code");
+        // The same description as the accrual it reverses, from the same one place. Left unset it
+        // defaulted to the G/L account's name, so the two halves of a reversed accrual read as
+        // unrelated entries on the account - the pair has to be recognisable as a pair.   //AAV.SP
+        GenJnlLine.Description := StdRcptAccrual.AccrualDescription(RcptHdr);
         GenJnlPostLine.RunWithCheck(GenJnlLine);
     end;
 

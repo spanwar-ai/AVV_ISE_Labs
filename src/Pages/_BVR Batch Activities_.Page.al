@@ -41,11 +41,11 @@ page 50168 "BVR Batch Activities"
                     DrillDownPageId = "BVR Purch CrMemo Batch List";
                     ToolTip = 'Specifies how many purchase credit memo batches are still open. Choose the number to open them.';
                 }
-                field("Sales Shipment Batches"; Rec."Sales Shipment Batches")
+                field("Sales Invoice Batches"; Rec."Sales Invoice Batches")
                 {
                     ApplicationArea = All;
-                    DrillDownPageId = "BVR Sales Shpt Batch List";
-                    ToolTip = 'Specifies how many sales shipment batches are still open. Choose the number to open them.';
+                    DrillDownPageId = "BVR Sales Inv Batch List";
+                    ToolTip = 'Specifies how many sales invoice batches are still open. Choose the number to open them.';
                 }
                 field("Sales Cr. Memo Batches"; Rec."Sales Cr. Memo Batches")
                 {
@@ -68,15 +68,10 @@ page 50168 "BVR Batch Activities"
                     ApplicationArea = All;
                     ToolTip = 'Specifies how many released purchase invoices and credit memos are sitting in a batch waiting to be posted.';
                 }
-                field("Whse. Shipments to Post"; Rec."Whse. Shipments to Post")
-                {
-                    ApplicationArea = All;
-                    ToolTip = 'Specifies how many released warehouse shipments are sitting in a batch waiting to be posted. Shipments that are still Open are not counted, because they cannot be posted.';
-                }
                 field("Sales Documents to Post"; Rec."Sales Documents to Post")
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies how many released sales credit memos are sitting in a batch waiting to be posted. Warehouse shipments are counted separately.';
+                    ToolTip = 'Specifies how many released sales invoices and credit memos are sitting in a batch waiting to be posted.';
                 }
             }
         }

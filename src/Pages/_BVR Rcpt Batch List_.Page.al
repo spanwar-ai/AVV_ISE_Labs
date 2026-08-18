@@ -39,6 +39,11 @@ page 50153 "BVR Rcpt Batch List"
                     ApplicationArea = All;
                     ToolTip = 'Specifies what this batch is for.';
                 }
+                field("Posting Date"; Rec."Posting Date")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Specifies the date every document in this batch will post on. Set it and the batch posts as one accounting event, whatever dates the individual documents carry. Leave it blank and each document keeps its own posting date.';
+                }
                 field("No. of Whse. Receipts"; Rec."No. of Whse. Receipts")
                 {
                     ApplicationArea = All;
@@ -92,11 +97,38 @@ page 50153 "BVR Rcpt Batch List"
                 ToolTip = 'Open the batch to review and post the warehouse receipts linked to it.';
             }
         }
+        area(reporting)
+        {
+            // Printed from the list rather than only from inside a batch, so a whole run of batches
+            // can go out in one report. Rows selected in the list are what gets printed; with
+            // nothing selected it is the row the cursor is on.   //AAV.SP
+            action("BVR Print Batch Edit List")
+            {
+                ApplicationArea = All;
+                Caption = 'Print';
+                Image = PrintReport;
+                ToolTip = 'Print the selected batches: every warehouse receipt in each one, the lines behind each receipt, and the accrual entry it will book when the batch is posted. Print this before posting - it exists to be read while there is still something to correct.';
+
+                trigger OnAction()
+                var
+                    RcptBatch: Record "BVR Purch Rcpt Batch";
+                begin
+                    CurrPage.SetSelectionFilter(RcptBatch);
+                    if RcptBatch.IsEmpty() then
+                        exit;
+                    Report.Run(Report::"BVR Purch Rcpt Batch Report", true, false, RcptBatch);
+                end;
+            }
+        }
         area(Promoted)
         {
             group(Category_Process)
             {
                 actionref("BVR Open Batch_Promoted"; "BVR Open Batch") { }
+            }
+            group(Category_Report)
+            {
+                actionref("BVR Print Batch Edit List_Prom"; "BVR Print Batch Edit List") { }
             }
         }
     }

@@ -51,6 +51,8 @@ codeunit 50147 "BVR Whse Rcpt Batch Post"
             Error(NothingSelectedErr);
 
         foreach ReceiptNo in ReceiptNos do begin
+            ApplyBatchPostingDate(ReceiptNo);
+
             WhseRcptLine.Reset();
             WhseRcptLine.SetRange("No.", ReceiptNo);
             if not WhseRcptLine.FindFirst() then
@@ -64,6 +66,36 @@ codeunit 50147 "BVR Whse Rcpt Batch Post"
         end;
 
         CloseCompletedBatches(BatchCodes, PostedCount);
+    end;
+
+    // The batch's posting date, where it has one, is forced onto the receipt before it posts, so a
+    // batch books as ONE accounting event whatever dates the individual receipts were entered with.
+    //
+    // Stamping the WAREHOUSE RECEIPT is enough and is the only place it should be done: the base
+    // "Whse.-Post Receipt" copies this date onto the purchase order it is receiving, so the posted
+    // receipt, the item ledger entries and the accrual entry all land on the same day without any of
+    // them being set separately. Inside the batch transaction, so a rolled-back batch takes the date
+    // change with it.
+    //
+    // A batch with no posting date changes nothing - every receipt keeps its own.   //AAV.SP
+    local procedure ApplyBatchPostingDate(ReceiptNo: Code[20])
+    var
+        WhseRcptHeaderToDate: Record "Warehouse Receipt Header";
+        RcptBatch: Record "BVR Purch Rcpt Batch";
+    begin
+        if not WhseRcptHeaderToDate.Get(ReceiptNo) then
+            exit;
+        if WhseRcptHeaderToDate."BVR Batch No." = '' then
+            exit;
+        if not RcptBatch.Get(WhseRcptHeaderToDate."BVR Batch No.") then
+            exit;
+        if RcptBatch."Posting Date" = 0D then
+            exit;
+        if WhseRcptHeaderToDate."Posting Date" = RcptBatch."Posting Date" then
+            exit;
+
+        WhseRcptHeaderToDate.Validate("Posting Date", RcptBatch."Posting Date");
+        WhseRcptHeaderToDate.Modify(true);
     end;
 
     // A batch whose last document has just posted is closed, which also takes it out of the Batch No.

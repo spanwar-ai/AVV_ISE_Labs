@@ -1,17 +1,17 @@
-table 50156 "BVR Sales Shpt Batch"
+table 50156 "BVR Sales Inv Batch"
 {
-    // Batch of warehouse shipments for review before posting, in the spirit of a General Journal Batch.
+    // Batch of sales invoices for AP/AR review, in the spirit of a General Journal Batch.
     //
-    // One table per batch process. A batch code therefore means exactly one thing - a sales shipment batch - and
+    // One table per batch process. A batch code therefore means exactly one thing - a sales invoice batch - and
     // the tables carry no Type field to keep in step. The trade is that the same code can exist on two
     // different batch tables; they are separate registers, not one register with a discriminator.
     //
     // Shared behaviour - what a batch is worth, and whether anything is left in it - lives in codeunit
     // "BVR Batch Doc Mgt" rather than being copied into all five tables.   //AAV.SP
-    Caption = 'Sales Shipment Batch';
+    Caption = 'Sales Invoice Batch';
     DataClassification = CustomerContent;
-    LookupPageId = "BVR Sales Shpt Batch List";
-    DrillDownPageId = "BVR Sales Shpt Batch List";
+    LookupPageId = "BVR Sales Inv Batch List";
+    DrillDownPageId = "BVR Sales Inv Batch List";
 
     fields
     {
@@ -31,19 +31,33 @@ table 50156 "BVR Sales Shpt Batch"
             Caption = 'Status';
             Editable = false;
         }
-        field(10; "No. of Whse. Shipments"; Integer)
+        // Every document in this batch posts on THIS date. A batch is one accounting event, so a run
+        // cannot straddle two dates just because the documents happened to be entered on different
+        // days. Left blank, each document keeps its own posting date and nothing is overridden -
+        // which is what every batch created before this field existed does.   //AAV.SP
+        field(5; "Posting Date"; Date)
         {
-            Caption = 'No. of Warehouse Shipments';
-            Editable = false;
-            FieldClass = FlowField;
-            CalcFormula = count("Warehouse Shipment Header" where("BVR Batch No." = field("Code")));
+            Caption = 'Posting Date';
+
+            trigger OnValidate()
+            begin
+                if Status = Status::Closed then
+                    Error(ClosedBatchErr, "Code");
+            end;
         }
-        field(11; "No. of Posted Sales Shpts."; Integer)
+        field(10; "No. of Sales Invoices"; Integer)
         {
-            Caption = 'No. of Posted Sales Shipments';
+            Caption = 'No. of Sales Invoices';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = count("Sales Shipment Header" where("BVR Batch No." = field("Code")));
+            CalcFormula = count("Sales Header" where("Document Type" = const("Invoice"), "BVR Doc Batch No." = field("Code")));
+        }
+        field(11; "No. of Posted Sales Invoices"; Integer)
+        {
+            Caption = 'No. of Posted Sales Invoices';
+            Editable = false;
+            FieldClass = FlowField;
+            CalcFormula = count("Sales Invoice Header" where("BVR Doc Batch No." = field("Code")));
         }
     }
 
@@ -62,6 +76,9 @@ table 50156 "BVR Sales Shpt Batch"
         }
     }
 
+    var
+        ClosedBatchErr: Label 'Batch %1 is closed, so its posting date can no longer be changed. Reopen the batch first.', Comment = '%1 = batch code';
+
     // Closes the batch once nothing is left in it to post. Called at the end of a successful batch
     // post; runs inside that same transaction, so if the batch post is rolled back the close goes
     // with it. Returns whether it actually closed the batch.   //AAV.SP
@@ -71,7 +88,7 @@ table 50156 "BVR Sales Shpt Batch"
     begin
         if Status = Status::Closed then
             exit(false);
-        if not BatchDocMgt.WhseShptBatchIsEmpty("Code") then
+        if not BatchDocMgt.SalesBatchIsEmpty(Enum::"Sales Document Type"::Invoice, "Code") then
             exit(false);
 
         Status := Status::Closed;
@@ -93,6 +110,6 @@ table 50156 "BVR Sales Shpt Batch"
     var
         BatchDocMgt: Codeunit "BVR Batch Doc Mgt";
     begin
-        exit(BatchDocMgt.WhseShptTotal("Code"));
+        exit(BatchDocMgt.SalesDocTotal(Enum::"Sales Document Type"::Invoice, "Code"));
     end;
 }

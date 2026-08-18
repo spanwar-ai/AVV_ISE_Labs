@@ -133,7 +133,7 @@ pageextension 50114 "BVR Warehouse Receipt Ext" extends "Warehouse Receipt"
             action("BVR Send for Approval")   //AAV.SP
             {
                 ApplicationArea = Warehouse;
-                Caption = 'Send for Approval';
+                Caption = 'Release';
                 Image = SendApprovalRequest;
                 Visible = Rec."BVR Receipt Status" = Rec."BVR Receipt Status"::"Sent to AP Team";
                 Enabled = IsAPTeamUser

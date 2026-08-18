@@ -52,13 +52,15 @@ codeunit 50130 "BVR Whse Rcpt Appr Mgt"
         // dimension names (CaptionClass '1,2,n'), e.g. "DEPARTMENT must have a value".   //AAV.SP
         WhseReceiptHeader.TestField("BVR Shortcut Dimension 1 Code");
         //WhseReceiptHeader.TestField("BVR Shortcut Dimension 2 Code");
-        CheckWorkflowEnabled(WhseReceiptHeader);
+        //CheckWorkflowEnabled(WhseReceiptHeader);
 
         // Hand off to the native workflow. The document responses set the status: Pending Approval
         // (Set Status to Pending Approval), or straight to Released (Release Document) when the
         // sender is a sufficient approver and the request auto-approves during send.   //AAV.SP
-        WhseRcptApprEvents.OnSendWhseReceiptForApproval(WhseReceiptHeader);
+        //WhseRcptApprEvents.OnSendWhseReceiptForApproval(WhseReceiptHeader);
         WhseReceiptHeader.Get(WhseReceiptHeader."No.");
+        WhseReceiptHeader."BVR Receipt Status" := WhseReceiptHeader."BVR Receipt Status"::Released;
+        WhseReceiptHeader.Modify();
     end;
 
     procedure ApproveRequest(var WhseReceiptHeader: Record "Warehouse Receipt Header")

@@ -34,6 +34,11 @@ page 50166 "BVR Sales CrMemo Batch"
                     ApplicationArea = All;
                     ToolTip = 'Specifies what this batch is for.';
                 }
+                field("Posting Date"; Rec."Posting Date")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Specifies the date every document in this batch will post on. Set it and the batch posts as one accounting event, whatever dates the individual documents carry. Leave it blank and each document keeps its own posting date.';
+                }
                 field("No. of Sales Cr. Memos"; Rec."No. of Sales Cr. Memos")
                 {
                     ApplicationArea = All;

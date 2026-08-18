@@ -31,6 +31,20 @@ table 50155 "BVR Purch CrMemo Batch"
             Caption = 'Status';
             Editable = false;
         }
+        // Every document in this batch posts on THIS date. A batch is one accounting event, so a run
+        // cannot straddle two dates just because the documents happened to be entered on different
+        // days. Left blank, each document keeps its own posting date and nothing is overridden -
+        // which is what every batch created before this field existed does.   //AAV.SP
+        field(5; "Posting Date"; Date)
+        {
+            Caption = 'Posting Date';
+
+            trigger OnValidate()
+            begin
+                if Status = Status::Closed then
+                    Error(ClosedBatchErr, "Code");
+            end;
+        }
         field(10; "No. of Purch. Cr. Memos"; Integer)
         {
             Caption = 'No. of Purchase Credit Memos';
@@ -61,6 +75,9 @@ table 50155 "BVR Purch CrMemo Batch"
         {
         }
     }
+
+    var
+        ClosedBatchErr: Label 'Batch %1 is closed, so its posting date can no longer be changed. Reopen the batch first.', Comment = '%1 = batch code';
 
     // Closes the batch once nothing is left in it to post. Called at the end of a successful batch
     // post; runs inside that same transaction, so if the batch post is rolled back the close goes

@@ -40,12 +40,12 @@ table 50152 "BVR Batch Cue"
             FieldClass = FlowField;
             CalcFormula = count("BVR Purch CrMemo Batch" where(Status = const(Open)));
         }
-        field(13; "Sales Shipment Batches"; Integer)
+        field(13; "Sales Invoice Batches"; Integer)
         {
-            Caption = 'Sales Shipment Batches';
+            Caption = 'Sales Invoice Batches';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = count("BVR Sales Shpt Batch" where(Status = const(Open)));
+            CalcFormula = count("BVR Sales Inv Batch" where(Status = const(Open)));
         }
         field(14; "Sales Cr. Memo Batches"; Integer)
         {
@@ -74,23 +74,12 @@ table 50152 "BVR Batch Cue"
                                                          "BVR Doc Batch No." = filter(<> ''),
                                                          Status = const(Released)));
         }
-        // The sales counterpart of "Whse. Receipts to Post". Without it the sales half of the process
-        // had no waiting-to-post tile at all: shipments are batched on the Warehouse Shipment, and the
-        // credit memo count below cannot see them.   //AAV.SP
-        field(23; "Whse. Shipments to Post"; Integer)
-        {
-            Caption = 'Warehouse Shipments to Post';
-            Editable = false;
-            FieldClass = FlowField;
-            CalcFormula = count("Warehouse Shipment Header" where("BVR Batch No." = filter(<> ''),
-                                                                   Status = const(Released)));
-        }
         field(22; "Sales Documents to Post"; Integer)
         {
-            Caption = 'Sales Credit Memos to Post';
+            Caption = 'Sales Documents to Post';
             Editable = false;
             FieldClass = FlowField;
-            CalcFormula = count("Sales Header" where("Document Type" = const("Credit Memo"),
+            CalcFormula = count("Sales Header" where("Document Type" = filter(Invoice | "Credit Memo"),
                                                       "BVR Doc Batch No." = filter(<> ''),
                                                       Status = const(Released)));
         }

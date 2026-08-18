@@ -1,14 +1,14 @@
 tableextension 50123 "BVR Sales Header Ext" extends "Sales Header"
 {
-    // Sales side of the document-batch process: a Sales Order or Sales Credit Memo is put into a
-    // batch and posted from the batch pages together with the rest of it, exactly as purchase
-    // invoices are.   //AAV.SP
+    // Sales side of the document-batch process: a Sales Invoice or Sales Credit Memo is put into a
+    // batch and posted from the batch pages together with the rest of it, exactly as the purchase
+    // documents are.   //AAV.SP
     fields
     {
-        // One field serves both document types. The relation is conditional on "Document Type", so only a
-        // credit memo can be batched here. Sales ORDERS are not batched on the order at all - their
-        // batch lives on the Warehouse Shipment, mirroring how the purchase side batches the
-        // Warehouse Receipt rather than the purchase order.
+        // One field serves both document types. The relation is conditional on "Document Type", so an
+        // invoice can only go in an Invoice batch and a credit memo only in a Credit Memo batch - the
+        // lookup itself enforces it, with no validation code to keep in step. Sales orders and
+        // shipments are not batched at all.
         //
         // Field 50124 to match "Purchase Header", and to match the posted sales tables below, so that
         // Sales-Post's TransferFields carries the batch onto the posted document with no extra
@@ -22,7 +22,9 @@ tableextension 50123 "BVR Sales Header Ext" extends "Sales Header"
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
             ValidateTableRelation = false;
-            TableRelation = if ("Document Type" = const("Credit Memo")) "BVR Sales CrMemo Batch"."Code" where(Status = const(Open));
+            TableRelation = if ("Document Type" = const(Invoice)) "BVR Sales Inv Batch"."Code" where(Status = const(Open))
+            else
+            if ("Document Type" = const("Credit Memo")) "BVR Sales CrMemo Batch"."Code" where(Status = const(Open));
 
             trigger OnValidate()
             var

@@ -76,9 +76,36 @@ codeunit 50125 "BVR Std Rcpt Accrual"
         // codes - it applies a delta, so any NON-global dimensions on the order survive.
         // A blank warehouse dimension means "keep the order's own", not "clear it".   //AAV.SP
         ApplyWarehouseDimensions(PurchaseHeader, GenJnlLine);
-        GenJnlLine.Description := CopyStr(StrSubstNo('Receipt accrual %1', RcptHdr."No."), 1, MaxStrLen(GenJnlLine.Description));
+        GenJnlLine.Description := AccrualDescription(RcptHdr);
         GenJnlPostLine.RunWithCheck(GenJnlLine);
     end;
+
+    // The description these accrual entries carry into the G/L.
+    //
+    // It is the receipt's own "Posting Description", so what the AP team types once on the Warehouse
+    // Receipt reaches the posted receipt AND the G/L entries that receipt books, and the two always
+    // read the same. The chain is entirely standard: codeunit "BVR Whse Receipt Mgt" puts the typed
+    // text on the purchase order, Purch.-Post's TransferFields carries it onto the posted receipt -
+    // field 22 on both headers - and it is read back from there here.
+    //
+    // The receipt number is deliberately NOT repeated in the text. It is already on the entry as its
+    // Document No., so the description is free to say what the receipt was FOR. Only when there is no
+    // posting description at all does it fall back to naming the receipt, which beats a blank line on
+    // an accrual account.
+    //
+    // Worth knowing: BC defaults "Posting Description" on a purchase order to the vendor name, so a
+    // receipt whose Warehouse Receipt was left blank books the vendor name rather than the old
+    // "Receipt accrual ..." wording. That is the point - the entry says the same thing the posted
+    // receipt says.   //AAV.SP
+    procedure AccrualDescription(PurchRcptHeader: Record "Purch. Rcpt. Header"): Text[100]
+    begin
+        if PurchRcptHeader."Posting Description" <> '' then
+            exit(CopyStr(PurchRcptHeader."Posting Description", 1, 100));
+        exit(CopyStr(StrSubstNo(AccrualDescTxt, PurchRcptHeader."No."), 1, 100));
+    end;
+
+    var
+        AccrualDescTxt: Label 'Receipt accrual %1', Comment = '%1 = posted purchase receipt no.';
 
     // Override the accrual line's two global dimensions with the ones the AP team entered on the
     // Warehouse Receipt (stamped onto the PO header by codeunit "BVR Whse Receipt Mgt"). This is the

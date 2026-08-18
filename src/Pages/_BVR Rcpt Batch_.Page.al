@@ -34,6 +34,11 @@ page 50154 "BVR Rcpt Batch"
                     ApplicationArea = All;
                     ToolTip = 'Specifies what this batch is for.';
                 }
+                field("Posting Date"; Rec."Posting Date")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Specifies the date every document in this batch will post on. Set it and the batch posts as one accounting event, whatever dates the individual documents carry. Leave it blank and each document keeps its own posting date.';
+                }
                 field("No. of Whse. Receipts"; Rec."No. of Whse. Receipts")
                 {
                     ApplicationArea = All;
@@ -96,12 +101,36 @@ page 50154 "BVR Rcpt Batch"
                 end;
             }
         }
+        area(reporting)
+        {
+            // The edit list, run against the batch that is open. Printed BEFORE posting - it exists
+            // to be read while there is still something to correct.   //AAV.SP
+            action("BVR Print Batch Edit List")
+            {
+                ApplicationArea = All;
+                Caption = 'Print Edit List';
+                Image = PrintReport;
+                ToolTip = 'Print this batch: every warehouse receipt in it, the lines behind each one, and the accrual entry each will book when the batch is posted.';
+
+                trigger OnAction()
+                var
+                    RcptBatch: Record "BVR Purch Rcpt Batch";
+                begin
+                    RcptBatch.SetRange("Code", Rec."Code");
+                    Report.Run(Report::"BVR Purch Rcpt Batch Report", true, false, RcptBatch);
+                end;
+            }
+        }
         area(Promoted)
         {
             group(Category_Process)
             {
                 actionref("BVR Post Selected_Promoted"; "BVR Post Selected") { }
                 actionref("BVR Post Whole Batch_Promoted"; "BVR Post Whole Batch") { }
+            }
+            group(Category_Report)
+            {
+                actionref("BVR Print Batch Edit List_Prom"; "BVR Print Batch Edit List") { }
             }
         }
     }

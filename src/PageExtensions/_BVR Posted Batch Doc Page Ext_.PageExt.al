@@ -19,24 +19,20 @@ pageextension 50143 "BVR Posted Purch Cr Memo Ext" extends "Posted Purchase Cred
     }
 }
 
-// The sales side ends at the SHIPMENT, so this is where the batch is shown - the exact counterpart of
-// the batch on the Posted Purchase Receipt.
-//
-// The Posted Sales INVOICE deliberately shows nothing. It used to, back when the sales batch sat on
-// the sales order; now that the batch sits on the Warehouse Shipment there is nothing to show, and an
-// invoice cannot inherit one anyway - it can combine shipments from several different batches.
-//   //AAV.SP
-pageextension 50144 "BVR Posted Sales Shpt Ext" extends "Posted Sales Shipment"
+// The Posted Sales Shipment deliberately shows nothing - the sales batch is on the invoice, and a
+// shipment can be invoiced later, in part, or across several invoices, so there is no one batch it
+// belongs to. Its old batch fields are obsolete and never written.   //AAV.SP
+pageextension 50144 "BVR Posted Sales Invoice Ext" extends "Posted Sales Invoice"
 {
     layout
     {
         addlast(General)
         {
-            field("BVR Batch No."; Rec."BVR Batch No.")
+            field("BVR Doc Batch No."; Rec."BVR Doc Batch No.")
             {
                 ApplicationArea = All;
                 Editable = false;
-                ToolTip = 'Specifies the batch the warehouse shipment behind this posted shipment was posted from.';
+                ToolTip = 'Specifies the batch this invoice was posted from.';
             }
         }
     }

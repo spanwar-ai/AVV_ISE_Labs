@@ -26,49 +26,41 @@ tableextension 50125 "BVR Sales Invoice Hdr Ext" extends "Sales Invoice Header"
 {
     fields
     {
-        // Superseded, along with the sales-order batch it came from. The sales batch is now held on
-        // the Warehouse Shipment, so a posted sales invoice has no batch to inherit - and could not
-        // have one anyway, since an invoice can combine shipments out of several different batches.
-        // The batch is shown on the Posted Sales Shipment instead.
-        //
-        // Kept rather than dropped so any value already written survives.   //AAV.SP
         field(50124; "BVR Doc Batch No."; Code[20])
-        {
-            Caption = 'Batch No. (old)';
-            DataClassification = CustomerContent;
-            Editable = false;
-            ObsoleteState = Pending;
-            ObsoleteReason = 'The sales batch is held on the Warehouse Shipment and reported on the Posted Sales Shipment.';
-        }
-    }
-}
-
-// Tagged as well as the invoice, because a Sales Order posted Ship-only produces a shipment and no
-// invoice at all - without this the batch would lose sight of it entirely.   //AAV.SP
-tableextension 50126 "BVR Sales Shpt Hdr Ext" extends "Sales Shipment Header"
-{
-    fields
-    {
-        // Field 50110, matching "BVR Batch No." on "Purch. Rcpt. Header", and deliberately NOT 50124.
-        // The batch lives on the WAREHOUSE SHIPMENT, not on the sales order, so there is nothing for
-        // Sales-Post's TransferFields to carry - codeunit "BVR Whse Shipment Mgt" stamps it as each
-        // shipment is created. Reusing 50124 would let the sales order's own batch field overwrite it.
-        field(50110; "BVR Batch No."; Code[20])
         {
             Caption = 'Batch No.';
             DataClassification = CustomerContent;
             Editable = false;
-            TableRelation = "BVR Sales Shpt Batch"."Code";
+            TableRelation = "BVR Sales Inv Batch"."Code";
         }
-        // Superseded by 50110 above, when the sales batch moved from the order to the warehouse
-        // shipment. Kept rather than dropped so any value already written survives.   //AAV.SP
+    }
+}
+
+// Both fields are obsolete: there is no sales shipment batch process. 50124 came from the original
+// design, where the batch sat on the sales order; 50110 from the design that replaced it, where the
+// batch sat on the warehouse shipment. Neither is written any more.
+//
+// Kept rather than dropped so whatever either of them already holds survives - a posted shipment is
+// a record of something that happened, and the batch it came out of is part of that record.   //AAV.SP
+tableextension 50126 "BVR Sales Shpt Hdr Ext" extends "Sales Shipment Header"
+{
+    fields
+    {
+        field(50110; "BVR Batch No."; Code[20])
+        {
+            Caption = 'Batch No. (old)';
+            DataClassification = CustomerContent;
+            Editable = false;
+            ObsoleteState = Pending;
+            ObsoleteReason = 'The sales shipment batch process has been removed.';
+        }
         field(50124; "BVR Doc Batch No."; Code[20])
         {
             Caption = 'Batch No. (old)';
             DataClassification = CustomerContent;
             Editable = false;
             ObsoleteState = Pending;
-            ObsoleteReason = 'The sales batch is now held on the Warehouse Shipment; use "BVR Batch No." (50110).';
+            ObsoleteReason = 'The sales shipment batch process has been removed.';
         }
     }
 }

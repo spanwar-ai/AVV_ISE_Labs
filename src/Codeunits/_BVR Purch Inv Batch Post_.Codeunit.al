@@ -56,6 +56,8 @@ codeunit 50149 "BVR Purch Inv Batch Post"
             if not PurchHeaderToPost.Get(TempDocToPost."Document Type", TempDocToPost."No.") then
                 Error(BatchRolledBackErr, TempDocToPost."No.", GoneErr);
 
+            ApplyBatchPostingDate(PurchHeaderToPost);
+
             Clear(SelfPost);
             if not SelfPost.Run(PurchHeaderToPost) then
                 Error(BatchRolledBackErr, TempDocToPost."No.", GetLastErrorText());
@@ -64,6 +66,44 @@ codeunit 50149 "BVR Purch Inv Batch Post"
         until TempDocToPost.Next() = 0;
 
         CloseCompletedBatches(TempDocToPost."Document Type", BatchCodes, PostedCount);
+    end;
+
+    // The batch's posting date, where it has one, is forced onto the document before it posts, so a
+    // batch books as ONE accounting event whatever dates the documents were entered with. Validate
+    // rather than a plain assignment: the base trigger re-reads the currency exchange rate for the
+    // new date and, where "Link Doc. Date To Posting Date" is on, moves the document date with it -
+    // all of which a straight assignment would silently skip.
+    //
+    // Done here rather than in OnRun because OnRun's Rec arrives by value, and because the batch
+    // table to read depends on the document type. Inside the batch transaction, so a rolled-back
+    // batch takes the date change with it.
+    //
+    // A batch with no posting date changes nothing - every document keeps its own.   //AAV.SP
+    local procedure ApplyBatchPostingDate(var PurchaseHeader: Record "Purchase Header")
+    var
+        InvBatch: Record "BVR Purch Inv Batch";
+        CrMemoBatch: Record "BVR Purch CrMemo Batch";
+        BatchPostingDate: Date;
+    begin
+        if PurchaseHeader."BVR Doc Batch No." = '' then
+            exit;
+
+        case PurchaseHeader."Document Type" of
+            PurchaseHeader."Document Type"::Invoice:
+                if InvBatch.Get(PurchaseHeader."BVR Doc Batch No.") then
+                    BatchPostingDate := InvBatch."Posting Date";
+            PurchaseHeader."Document Type"::"Credit Memo":
+                if CrMemoBatch.Get(PurchaseHeader."BVR Doc Batch No.") then
+                    BatchPostingDate := CrMemoBatch."Posting Date";
+        end;
+
+        if BatchPostingDate = 0D then
+            exit;
+        if PurchaseHeader."Posting Date" = BatchPostingDate then
+            exit;
+
+        PurchaseHeader.Validate("Posting Date", BatchPostingDate);
+        PurchaseHeader.Modify(true);
     end;
 
     // A batch whose last document has just posted is closed, which also takes it out of the Batch No.

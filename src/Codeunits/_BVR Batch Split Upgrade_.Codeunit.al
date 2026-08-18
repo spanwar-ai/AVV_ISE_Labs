@@ -29,7 +29,6 @@ codeunit 50155 "BVR Batch Split Upgrade"
         RcptBatch: Record "BVR Purch Rcpt Batch";
         InvBatch: Record "BVR Purch Inv Batch";
         PurchCrMemoBatch: Record "BVR Purch CrMemo Batch";
-        SalesShptBatch: Record "BVR Sales Shpt Batch";
         SalesCrMemoBatch: Record "BVR Sales CrMemo Batch";
     begin
         if not DocBatch.FindSet() then
@@ -61,17 +60,10 @@ codeunit 50155 "BVR Batch Split Upgrade"
                         PurchCrMemoBatch.Status := DocBatch.Status;
                         PurchCrMemoBatch.Insert();
                     end;
-                // The old Sales Order batches become Sales Shipment batches: the sales side now batches
-                // the Warehouse Shipment rather than the order. The batch codes carry over as they
-                // are - what changed is which documents hang off them.   //AAV.SP
-                DocBatch.Type::"Sales Order":
-                    if not SalesShptBatch.Get(DocBatch."Code") then begin
-                        SalesShptBatch.Init();
-                        SalesShptBatch."Code" := DocBatch."Code";
-                        SalesShptBatch.Description := DocBatch.Description;
-                        SalesShptBatch.Status := DocBatch.Status;
-                        SalesShptBatch.Insert();
-                    end;
+                // Type::"Sales Order" is deliberately not handled. There is no sales shipment batch
+                // process any more, so an old Sales Order batch has no table to move to. The rows stay
+                // in "BVR Doc Batch" - which this upgrade copies from and never empties - so nothing is
+                // destroyed and they can still be read there.   //AAV.SP
                 DocBatch.Type::"Sales Credit Memo":
                     if not SalesCrMemoBatch.Get(DocBatch."Code") then begin
                         SalesCrMemoBatch.Init();
