@@ -59,36 +59,6 @@
                                 <PaddingRight>2pt</PaddingRight>
                               </Style>
                             </Textbox>
-                            <Textbox Name="TopStub_CheckNo">
-                              <CanGrow>false</CanGrow>
-                              <KeepTogether>true</KeepTogether>
-                              <Paragraphs>
-                                <Paragraph>
-                                  <TextRuns>
-                                    <TextRun>
-                                      <Value>=Last(Fields!CheckNoText.Value)</Value>
-                                      <Style>
-                                        <FontFamily>Arial</FontFamily>
-                                        <FontSize>12pt</FontSize>
-                                        <FontWeight>Bold</FontWeight>
-                                      </Style>
-                                    </TextRun>
-                                  </TextRuns>
-                                  <Style>
-                                    <TextAlign>Right</TextAlign>
-                                  </Style>
-                                </Paragraph>
-                              </Paragraphs>
-                              <Top>0.0500in</Top>
-                              <Left>6.4400in</Left>
-                              <Height>0.1850in</Height>
-                              <Width>1.8000in</Width>
-                              <Style>
-                                <VerticalAlign>Middle</VerticalAlign>
-                                <PaddingLeft>2pt</PaddingLeft>
-                                <PaddingRight>2pt</PaddingRight>
-                              </Style>
-                            </Textbox>
                             <Textbox Name="TopStub_H1L0">
                               <CanGrow>false</CanGrow>
                               <KeepTogether>true</KeepTogether>
@@ -2558,36 +2528,6 @@
                                 <PaddingRight>2pt</PaddingRight>
                               </Style>
                             </Textbox>
-                            <Textbox Name="BotStub_CheckNo">
-                              <CanGrow>false</CanGrow>
-                              <KeepTogether>true</KeepTogether>
-                              <Paragraphs>
-                                <Paragraph>
-                                  <TextRuns>
-                                    <TextRun>
-                                      <Value>=Last(Fields!CheckNoText.Value)</Value>
-                                      <Style>
-                                        <FontFamily>Arial</FontFamily>
-                                        <FontSize>12pt</FontSize>
-                                        <FontWeight>Bold</FontWeight>
-                                      </Style>
-                                    </TextRun>
-                                  </TextRuns>
-                                  <Style>
-                                    <TextAlign>Right</TextAlign>
-                                  </Style>
-                                </Paragraph>
-                              </Paragraphs>
-                              <Top>6.9000in</Top>
-                              <Left>6.4400in</Left>
-                              <Height>0.1850in</Height>
-                              <Width>1.8000in</Width>
-                              <Style>
-                                <VerticalAlign>Middle</VerticalAlign>
-                                <PaddingLeft>2pt</PaddingLeft>
-                                <PaddingRight>2pt</PaddingRight>
-                              </Style>
-                            </Textbox>
                             <Textbox Name="BotStub_H1L0">
                               <CanGrow>false</CanGrow>
                               <KeepTogether>true</KeepTogether>
@@ -5034,7 +4974,7 @@
                                 <Paragraph>
                                   <TextRuns>
                                     <TextRun>
-                                      <Value>=Last(Fields!CheckDateText_Control1020013.Value)</Value>
+                                      <Value>=Last(Fields!BVRCheckDateMDY.Value)</Value>
                                       <Style>
                                         <FontFamily>Arial</FontFamily>
                                         <FontSize>11pt</FontSize>
@@ -5049,7 +4989,7 @@
                               <Top>4.5300in</Top>
                               <Left>5.5000in</Left>
                               <Height>0.1700in</Height>
-                              <Width>1.0500in</Width>
+                              <Width>1.2000in</Width>
                               <Style>
                                 <VerticalAlign>Middle</VerticalAlign>
                                 <PaddingLeft>2pt</PaddingLeft>
@@ -5063,7 +5003,7 @@
                                 <Paragraph>
                                   <TextRuns>
                                     <TextRun>
-                                      <Value>=Last(Fields!DollarSignBefore_CheckAmountText_DollarSignAfter.Value)</Value>
+                                      <Value>=Trim(Replace(Last(Fields!DollarSignBefore_CheckAmountText_DollarSignAfter.Value), "*", ""))</Value>
                                       <Style>
                                         <FontFamily>Arial</FontFamily>
                                         <FontSize>11pt</FontSize>
@@ -5076,9 +5016,9 @@
                                 </Paragraph>
                               </Paragraphs>
                               <Top>4.5300in</Top>
-                              <Left>7.0000in</Left>
+                              <Left>6.8600in</Left>
                               <Height>0.1700in</Height>
-                              <Width>1.0800in</Width>
+                              <Width>1.2200in</Width>
                               <Style>
                                 <VerticalAlign>Middle</VerticalAlign>
                                 <PaddingLeft>2pt</PaddingLeft>
@@ -5974,6 +5914,9 @@
         </Field>
         <Field Name="BVRBalAccountNo">
           <DataField>BVRBalAccountNo</DataField>
+        </Field>
+        <Field Name="BVRCheckDateMDY">
+          <DataField>BVRCheckDateMDY</DataField>
         </Field>
         <Field Name="BVRVendorIdCaption">
           <DataField>BVRVendorIdCaption</DataField>

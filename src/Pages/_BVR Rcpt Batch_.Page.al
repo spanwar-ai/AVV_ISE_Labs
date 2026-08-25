@@ -108,7 +108,7 @@ page 50154 "BVR Rcpt Batch"
             action("BVR Print Batch Edit List")
             {
                 ApplicationArea = All;
-                Caption = 'Print Edit List';
+                Caption = 'Print';
                 Image = PrintReport;
                 ToolTip = 'Print this batch: every warehouse receipt in it, the lines behind each one, and the accrual entry each will book when the batch is posted.';
 

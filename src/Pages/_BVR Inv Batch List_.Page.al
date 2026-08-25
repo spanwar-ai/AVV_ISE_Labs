@@ -105,7 +105,7 @@ page 50156 "BVR Inv Batch List"
             action("BVR Print Batch Edit List")
             {
                 ApplicationArea = All;
-                Caption = 'Print Edit List';
+                Caption = 'Print';
                 Image = PrintReport;
                 ToolTip = 'Print the selected batches: every invoice in each one, the lines behind each invoice, and the G/L distribution it will book when the batch is posted. Print this before posting - it exists to be read while there is still something to correct.';
 

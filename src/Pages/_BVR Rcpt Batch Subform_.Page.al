@@ -84,7 +84,7 @@ page 50155 "BVR Rcpt Batch Subform"
                 Caption = 'Open Warehouse Receipt';
                 Image = Document;
                 RunObject = page "Warehouse Receipt";
-                RunPageLink = "No." = field("No.");
+                RunPageLink = "BVR Batch No." = field("BVR Batch No.");
                 ToolTip = 'Open the selected warehouse receipt to review it before posting.';
             }
         }

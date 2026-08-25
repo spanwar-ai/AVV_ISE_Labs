@@ -1,6 +1,6 @@
-report 50256 "BVR Purch Inv Batch Report"
+report 50258 "BVR Sales Inv Batch Report"
 {
-    // Edit list for a Purchase Invoice batch, printed BEFORE it posts: what the batch holds, what each document
+    // Edit list for a Sales Invoice batch, printed BEFORE it posts: what the batch holds, what each document
     // is worth, the lines behind it, and the G/L distribution each will book. One of the four
     // document batch edit lists, all generated from the same template so they cannot drift apart -
     // see the scratchpad's BuildDocBatchReports.py.
@@ -10,19 +10,17 @@ report 50256 "BVR Purch Inv Batch Report"
     // works out the account each line will hit by following the same rules the posting engine
     // follows, in the same order, and reports anything it cannot know rather than guessing.
     //
-    // Worth knowing about this flow: its invoices exist to clear the GRNI that "BVR Std Rcpt Accrual"
-    // credited at receipt. "BVR Std Get Receipt Lines" stamps a Vendor Accrual account onto every line
-    // it pulls from a receipt and redirects that line's posting there, so a healthy document books
-    // against Vendor Accrual rather than against an expense account - and one that does not is exactly
-    // what an edit list is for.   //AAV.SP
-    Caption = 'Purchase Invoice Batch';
+    // The REVENUE side only. An item line also books cost of goods sold against inventory, but that
+    // pair is computed from the item's cost at posting time and is not knowable from an unposted
+    // document, so it is left out rather than guessed at.   //AAV.SP
+    Caption = 'Sales Invoice Batch';
     UsageCategory = ReportsAndAnalysis;
     ApplicationArea = All;
-    DefaultRenderingLayout = "BVRPurchInvBatchLayout";
+    DefaultRenderingLayout = "BVRSalesInvBatchLayout";
 
     dataset
     {
-        dataitem(Batch; "BVR Purch Inv Batch")
+        dataitem(Batch; "BVR Sales Inv Batch")
         {
             RequestFilterFields = "Code", Status;
 
@@ -76,7 +74,7 @@ report 50256 "BVR Purch Inv Batch Report"
             {
             }
 
-            dataitem(Doc; "Purchase Header")
+            dataitem(Doc; "Sales Header")
             {
                 DataItemLink = "BVR Doc Batch No." = field("Code");
                 DataItemTableView = sorting("Document Type", "No.") where("Document Type" = const(Invoice));
@@ -93,13 +91,13 @@ report 50256 "BVR Purch Inv Batch Report"
                 column(InvStatus; Format(Status))
                 {
                 }
-                column(VendorNo; "Buy-from Vendor No.")
+                column(VendorNo; "Sell-to Customer No.")
                 {
                 }
-                column(VendorName; "Buy-from Vendor Name")
+                column(VendorName; "Sell-to Customer Name")
                 {
                 }
-                column(VendorDocNo; "Vendor Invoice No.")
+                column(VendorDocNo; "External Document No.")
                 {
                 }
                 column(VoucherNo; BVRVoucherNo)
@@ -129,7 +127,7 @@ report 50256 "BVR Purch Inv Batch Report"
                 column(TaxCaption; TaxCaptionLbl) { }
                 column(TotalCaption; TotalCaptionLbl) { }
 
-                dataitem(DocLine; "Purchase Line")
+                dataitem(DocLine; "Sales Line")
                 {
                     DataItemLink = "Document Type" = field("Document Type"), "Document No." = field("No.");
                     DataItemTableView = sorting("Document Type", "Document No.", "Line No.");
@@ -151,7 +149,7 @@ report 50256 "BVR Purch Inv Batch Report"
                     column(LineSiteId; "Location Code")
                     {
                     }
-                    column(LineRcptNo; "BVR Source Rcpt No.")
+                    column(LineRcptNo; Format("Shipment Date"))
                     {
                     }
                     column(LineType; Format(Type))
@@ -160,7 +158,7 @@ report 50256 "BVR Purch Inv Batch Report"
                     column(LineQty; Quantity)
                     {
                     }
-                    column(LineUnitCost; "Direct Unit Cost")
+                    column(LineUnitCost; "Unit Price")
                     {
                     }
                     column(LineExtendedCost; "Line Amount")
@@ -255,7 +253,7 @@ report 50256 "BVR Purch Inv Batch Report"
                 trigger OnAfterGetRecord()
                 begin
                     BVRBuildTotals(Doc);
-                    BVRDistCount := BVRDistMgt.BuildForPurchase(Doc, BVRDistBuffer, BVRDistNote);
+                    BVRDistCount := BVRDistMgt.BuildForSales(Doc, BVRDistBuffer, BVRDistNote);
                 end;
             }
         }
@@ -263,11 +261,11 @@ report 50256 "BVR Purch Inv Batch Report"
 
     rendering
     {
-        layout("BVRPurchInvBatchLayout")
+        layout("BVRSalesInvBatchLayout")
         {
             Type = RDLC;
-            LayoutFile = './ReportLayouts/BVRPurchInvBatch.rdl';
-            Caption = 'Purchase Invoice Batch';
+            LayoutFile = './ReportLayouts/BVRSalesInvBatch.rdl';
+            Caption = 'Sales Invoice Batch';
             Summary = 'Batch-wise edit list: documents, their lines and the G/L distribution each will book.';
         }
     }
@@ -294,11 +292,11 @@ report 50256 "BVR Purch Inv Batch Report"
     end;
 
     // What the document is worth, summed off its lines - the header carries no totals of its own.
-    // Amount is net of tax and of any invoice discount; Total is what the vendor will be charged;
+    // Amount is net of tax and of any invoice discount; Total is what the customer will be charged;
     // Tax is the difference, so the three always agree.   //AAV.SP
-    local procedure BVRBuildTotals(var DocHeader: Record "Purchase Header")
+    local procedure BVRBuildTotals(var DocHeader: Record "Sales Header")
     var
-        DocLine2: Record "Purchase Line";
+        DocLine2: Record "Sales Line";
     begin
         Clear(BVRInvAmount);
         Clear(BVRInvTotal);
@@ -350,35 +348,35 @@ report 50256 "BVR Purch Inv Batch Report"
         BVRDistNote: Text[250];
         BVRDim1Caption: Text[30];
         BVRDim2Caption: Text[30];
-        ReportCaptionLbl: Label 'PAYABLES TRANSACTION EDIT LIST';
+        ReportCaptionLbl: Label 'RECEIVABLES TRANSACTION EDIT LIST';
         SystemCaptionLbl: Label 'System:';
         UserDateCaptionLbl: Label 'User Date:';
         UserIdCaptionLbl: Label 'User ID:';
         PageNoCaptionLbl: Label 'Page:';
-        SubTitleCaptionLbl: Label 'Purchase Order Processing';
+        SubTitleCaptionLbl: Label 'Sales Order Processing';
         BatchIdCaptionLbl: Label 'Batch ID:';
         AuditTrailCaptionLbl: Label 'Audit Trail Code:';
         BatchCommentCaptionLbl: Label 'Batch Comment:';
         InvNoCaptionLbl: Label 'Invoice No.';
         DocDateCaptionLbl: Label 'Doc. Date';
         PostDateCaptionLbl: Label 'Post Date';
-        VendorIdCaptionLbl: Label 'Vendor ID';
+        VendorIdCaptionLbl: Label 'Customer ID';
         NameCaptionLbl: Label 'Name';
-        VendorDocNoCaptionLbl: Label 'Vendor Doc. No.';
+        VendorDocNoCaptionLbl: Label 'Cust. Doc. No.';
         StatusCaptionLbl: Label 'Status';
         VoucherNoCaptionLbl: Label 'Voucher No.';
         AmountCaptionLbl: Label 'Amount';
         TaxCaptionLbl: Label 'Tax Amount';
         TotalCaptionLbl: Label 'Total Amount';
-        LinesHeaderCaptionLbl: Label 'Purchase Invoice Lines';
+        LinesHeaderCaptionLbl: Label 'Sales Invoice Lines';
         ItemCaptionLbl: Label 'No.';
         DescriptionCaptionLbl: Label 'Description';
         UOMCaptionLbl: Label 'U of M';
         SiteIdCaptionLbl: Label 'Site ID';
-        RcptNoCaptionLbl: Label 'Receipt No.';
+        RcptNoCaptionLbl: Label 'Shipment Date';
         LineTypeCaptionLbl: Label 'Type';
         QtyCaptionLbl: Label 'Quantity';
-        UnitCostCaptionLbl: Label 'Unit Cost';
+        UnitCostCaptionLbl: Label 'Unit Price';
         ExtendedCostCaptionLbl: Label 'Extended Cost';
         DistHeaderCaptionLbl: Label 'G/L Distribution';
         AccountCaptionLbl: Label 'Account';

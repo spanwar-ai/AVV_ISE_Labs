@@ -97,11 +97,38 @@ page 50161 "BVR Purch CrMemo Batch List"
                 ToolTip = 'Open the batch to review and post the purchase credit memos linked to it.';
             }
         }
+        area(reporting)
+        {
+            // Printed from the list rather than only from inside a batch, so a whole run of batches
+            // can go out in one report. Rows selected in the list are what gets printed; with
+            // nothing selected it is the row the cursor is on.   //AAV.SP
+            action("BVR Print Batch Edit List")
+            {
+                ApplicationArea = All;
+                Caption = 'Print';
+                Image = PrintReport;
+                ToolTip = 'Print the selected batches: every document in each one, the lines behind it, and the G/L distribution it will book when the batch is posted. Print this before posting - it exists to be read while there is still something to correct.';
+
+                trigger OnAction()
+                var
+                    EditListBatch: Record "BVR Purch CrMemo Batch";
+                begin
+                    CurrPage.SetSelectionFilter(EditListBatch);
+                    if EditListBatch.IsEmpty() then
+                        exit;
+                    Report.Run(Report::"BVR Purch CrMemo Batch Report", true, false, EditListBatch);
+                end;
+            }
+        }
         area(Promoted)
         {
             group(Category_Process)
             {
                 actionref("BVR Open CrMemo Batch_Promoted"; "BVR Open CrMemo Batch") { }
+            }
+            group(Category_Report)
+            {
+                actionref("BVR Print Batch Edit List_Prom"; "BVR Print Batch Edit List") { }
             }
         }
     }

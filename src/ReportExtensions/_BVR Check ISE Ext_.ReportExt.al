@@ -53,6 +53,20 @@ reportextension 50147 "BVR Check ISE Ext" extends "Check (Stub/Check/Stub)"
             column(BVRBalAccountNo; "Bal. Account No.")
             {
             }
+            // The check date as mm/dd/yyyy.
+            //
+            // The base report already publishes a check date, but only as PROSE - "August 7, 2026" -
+            // built by its own DateIndicator logic, and a date that is already text cannot be given a
+            // different format in the layout. So the date is published again here from the source
+            // the base report itself uses: CheckLedgEntry."Check Date" is assigned GenJnlLine's
+            // "Posting Date", so this is the same day the check is written for, not an approximation
+            // of it.
+            //
+            // Formatted with an explicit picture rather than Format(Date) so it reads mm/dd/yyyy in
+            // every company, whatever the user's regional settings say.   //AAV.SP
+            column(BVRCheckDateMDY; Format("Posting Date", 0, '<Month,2>/<Day,2>/<Year4>'))
+            {
+            }
 
             // The stub's column headings, as dataset columns rather than as text typed into the
             // layout. This is how Microsoft's own check layouts carry every caption they print, and

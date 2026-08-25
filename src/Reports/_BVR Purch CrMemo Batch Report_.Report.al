@@ -1,6 +1,6 @@
-report 50256 "BVR Purch Inv Batch Report"
+report 50257 "BVR Purch CrMemo Batch Report"
 {
-    // Edit list for a Purchase Invoice batch, printed BEFORE it posts: what the batch holds, what each document
+    // Edit list for a Purchase Credit Memo batch, printed BEFORE it posts: what the batch holds, what each document
     // is worth, the lines behind it, and the G/L distribution each will book. One of the four
     // document batch edit lists, all generated from the same template so they cannot drift apart -
     // see the scratchpad's BuildDocBatchReports.py.
@@ -15,14 +15,14 @@ report 50256 "BVR Purch Inv Batch Report"
     // it pulls from a receipt and redirects that line's posting there, so a healthy document books
     // against Vendor Accrual rather than against an expense account - and one that does not is exactly
     // what an edit list is for.   //AAV.SP
-    Caption = 'Purchase Invoice Batch';
+    Caption = 'Purchase Credit Memo Batch';
     UsageCategory = ReportsAndAnalysis;
     ApplicationArea = All;
-    DefaultRenderingLayout = "BVRPurchInvBatchLayout";
+    DefaultRenderingLayout = "BVRPurchCrMemoBatchLayout";
 
     dataset
     {
-        dataitem(Batch; "BVR Purch Inv Batch")
+        dataitem(Batch; "BVR Purch CrMemo Batch")
         {
             RequestFilterFields = "Code", Status;
 
@@ -79,7 +79,7 @@ report 50256 "BVR Purch Inv Batch Report"
             dataitem(Doc; "Purchase Header")
             {
                 DataItemLink = "BVR Doc Batch No." = field("Code");
-                DataItemTableView = sorting("Document Type", "No.") where("Document Type" = const(Invoice));
+                DataItemTableView = sorting("Document Type", "No.") where("Document Type" = const("Credit Memo"));
 
                 column(InvNo; "No.")
                 {
@@ -263,11 +263,11 @@ report 50256 "BVR Purch Inv Batch Report"
 
     rendering
     {
-        layout("BVRPurchInvBatchLayout")
+        layout("BVRPurchCrMemoBatchLayout")
         {
             Type = RDLC;
-            LayoutFile = './ReportLayouts/BVRPurchInvBatch.rdl';
-            Caption = 'Purchase Invoice Batch';
+            LayoutFile = './ReportLayouts/BVRPurchCrMemoBatch.rdl';
+            Caption = 'Purchase Credit Memo Batch';
             Summary = 'Batch-wise edit list: documents, their lines and the G/L distribution each will book.';
         }
     }
@@ -359,7 +359,7 @@ report 50256 "BVR Purch Inv Batch Report"
         BatchIdCaptionLbl: Label 'Batch ID:';
         AuditTrailCaptionLbl: Label 'Audit Trail Code:';
         BatchCommentCaptionLbl: Label 'Batch Comment:';
-        InvNoCaptionLbl: Label 'Invoice No.';
+        InvNoCaptionLbl: Label 'Cr. Memo No.';
         DocDateCaptionLbl: Label 'Doc. Date';
         PostDateCaptionLbl: Label 'Post Date';
         VendorIdCaptionLbl: Label 'Vendor ID';
@@ -370,7 +370,7 @@ report 50256 "BVR Purch Inv Batch Report"
         AmountCaptionLbl: Label 'Amount';
         TaxCaptionLbl: Label 'Tax Amount';
         TotalCaptionLbl: Label 'Total Amount';
-        LinesHeaderCaptionLbl: Label 'Purchase Invoice Lines';
+        LinesHeaderCaptionLbl: Label 'Purchase Credit Memo Lines';
         ItemCaptionLbl: Label 'No.';
         DescriptionCaptionLbl: Label 'Description';
         UOMCaptionLbl: Label 'U of M';

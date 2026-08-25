@@ -101,12 +101,36 @@ page 50160 "BVR Purch CrMemo Batch"
                 end;
             }
         }
+        area(reporting)
+        {
+            // The edit list, run against the batch that is open. Printed BEFORE posting - it exists
+            // to be read while there is still something to correct.   //AAV.SP
+            action("BVR Print Batch Edit List")
+            {
+                ApplicationArea = All;
+                Caption = 'Print';
+                Image = PrintReport;
+                ToolTip = 'Print this batch: every document in it, the lines behind each one, and the G/L distribution each will book when the batch is posted.';
+
+                trigger OnAction()
+                var
+                    EditListBatch: Record "BVR Purch CrMemo Batch";
+                begin
+                    EditListBatch.SetRange("Code", Rec."Code");
+                    Report.Run(Report::"BVR Purch CrMemo Batch Report", true, false, EditListBatch);
+                end;
+            }
+        }
         area(Promoted)
         {
             group(Category_Process)
             {
                 actionref("BVR Post Selected CrMemos_Prom"; "BVR Post Selected CrMemos") { }
                 actionref("BVR Post Whole CrMemo Btch_Prom"; "BVR Post Whole CrMemo Batch") { }
+            }
+            group(Category_Report)
+            {
+                actionref("BVR Print Batch Edit List_Prom"; "BVR Print Batch Edit List") { }
             }
         }
     }
