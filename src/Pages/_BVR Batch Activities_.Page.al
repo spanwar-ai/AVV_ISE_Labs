@@ -1,11 +1,13 @@
 page 50168 "BVR Batch Activities"
 {
-    // Batch tiles for the Business Manager Role Center. Each tile drills through to the batch list it
+    // Batch tiles for the Business Manager Role Center. Each tile drills through to the list it
     // counts, so the Role Center is a way in to the batch process rather than just a readout.
     //
-    // Two groups on purpose. The first answers "how many batches are open", the second "is there
-    // anything in them to post" - a batch can sit open for days with nothing released in it, so the
-    // batch count on its own cannot tell a manager whether there is work waiting.   //AAV.SP
+    // Three groups on purpose, each answering a different question. "Open Batches" answers how many
+    // batches are open - a batch can sit open for days with nothing released in it, so that count on
+    // its own cannot tell a manager whether there is work waiting. "Pending with AP Team" answers
+    // what the AP team still owes back. "Waiting to Post" answers what is released and ready to
+    // post.   //AAV.SP
     PageType = CardPart;
     SourceTable = "BVR Batch Cue";
     Caption = 'Document Batches';
@@ -52,6 +54,20 @@ page 50168 "BVR Batch Activities"
                     ApplicationArea = All;
                     DrillDownPageId = "BVR Sales CrMemo Batch List";
                     ToolTip = 'Specifies how many sales credit memo batches are still open. Choose the number to open them.';
+                }
+            }
+            // Work the AP team owes back, kept apart from "Waiting to Post" because nothing here is
+            // waiting on a poster - it is waiting on accrual accounts being filled in, and only an AP
+            // user can clear it.   //AAV.SP
+            cuegroup("Pending with AP Team")
+            {
+                Caption = 'Pending with AP Team';
+
+                field("Whse. Receipts with AP Team"; Rec."Whse. Receipts with AP Team")
+                {
+                    ApplicationArea = All;
+                    DrillDownPageId = "Warehouse Receipts";
+                    ToolTip = 'Specifies how many warehouse receipts have been sent to the AP team and are waiting for the vendor and expense accrual accounts to be filled in. Choose the number to open them.';
                 }
             }
             cuegroup("Waiting to Post")

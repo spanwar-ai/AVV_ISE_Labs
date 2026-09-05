@@ -20,7 +20,20 @@
 //
 // A report extension cannot change the base RDLC, so none of this shows on Microsoft's layout. It
 // prints through the layout added below - a copy of the base layout with the extra columns and
-// rows. Users must select it on the Report Layouts page (or make it the default there).   //AAV.SP
+// rows. Users must select it on the Report Layouts page (or make it the default there).
+//
+// Two things live in that layout rather than here, because AL gives a report extension no way to do
+// them:
+//   * The journal lines print sorted by Document No. - the detail group carries a SortExpression on
+//     DocNo_GenJnlLine. "DataItemTableView" is read-only in a report extension, so the base
+//     dataitem's line-no. order cannot be changed; the dataset still arrives in line-no. order and
+//     the layout reorders it. Child rows carry the parent line's fields, so a document's dimensions,
+//     applied entries, expected entries and warnings travel with it, and the sort is stable, so
+//     line no. remains the order within a document.
+//   * The Gen. Posting Type, Gen. Bus. / Gen. Prod. Posting Group and Bal. Account No. columns are
+//     dropped. Their dataset columns still exist - they are the base report's and cannot be removed
+//     from here - but no cell binds them any more, and their width was shared out over the twelve
+//     columns that remain so the table still fills the page.   //AAV.SP
 reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test"
 {
     dataset
@@ -62,6 +75,22 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
             column(BVRShortcutDim2Caption; "Gen. Journal Line".FieldCaption("Shortcut Dimension 2 Code"))
             {
             }
+            // Short captions on purpose - the columns they head are narrow, and "Debit" / "Credit"
+            // is what the reviewer reads them as.   //AAV.SP
+            // The base "Account No." heading now sits over the customer / vendor / bank the line
+            // names, and the G/L account it posts to has a column of its own beside it.   //AAV.SP
+            column(BVRCustomerIdCaption; BVRCustomerIdCaptionLbl)
+            {
+            }
+            column(BVRPostingAccountCaption; BVRPostingAccountCaptionLbl)
+            {
+            }
+            column(BVRDebitCaption; BVRDebitCaptionLbl)
+            {
+            }
+            column(BVRCreditCaption; BVRCreditCaptionLbl)
+            {
+            }
         }
         add("Gen. Journal Line")
         {
@@ -70,6 +99,45 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
             }
             column(BVRShortcutDim2Code; "Shortcut Dimension 2 Code")
             {
+            }
+            // Replace the base report's single signed Amount column with the two sides of the entry.
+            // "Debit Amount" and "Credit Amount" are the line's own fields, so the split is BC's, not
+            // a sign test of ours - and they are in the LINE's currency, exactly as Amount was.
+            //
+            // Both are 0 on the side the line does not use; the layout blanks a zero rather than
+            // printing 0.00 in every unused cell.   //AAV.SP
+            column(BVRPostingAccountNo; BVRPostingSetupAccount("Gen. Journal Line"))
+            {
+            }
+            column(BVRDebitAmount; "Debit Amount")
+            {
+                AutoFormatType = 1;
+                AutoFormatExpression = "Currency Code";
+            }
+            column(BVRCreditAmount; "Credit Amount")
+            {
+                AutoFormatType = 1;
+                AutoFormatExpression = "Currency Code";
+            }
+            // Batch totals for the footer, added up HERE rather than by the layout.
+            //
+            // The dataset repeats a journal line's own columns on every row that hangs off it - its
+            // dimensions, its applied entries, its expected G/L entries, its warnings - so an RDLC
+            // Sum() over the batch counts each line once per sub-row it printed. A line with two
+            // dimension rows and an applied entry was counted four times. Totalling the LINES in AL
+            // is immune to how many rows any of them happen to print.
+            //
+            // The same value rides every row of the batch, so the footer takes Last() of it, the way
+            // the base report takes last() of its running balance.   //AAV.SP
+            column(BVRBatchDebitTotal; BVRBatchTotal("Gen. Journal Line", false))
+            {
+                AutoFormatType = 1;
+                AutoFormatExpression = "Currency Code";
+            }
+            column(BVRBatchCreditTotal; BVRBatchTotal("Gen. Journal Line", true))
+            {
+                AutoFormatType = 1;
+                AutoFormatExpression = "Currency Code";
             }
         }
         // The entries this line will apply to - the open customer, vendor or employee entries it
@@ -263,6 +331,9 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
                 column(BVRGLAccName; BVRGLAccName)
                 {
                 }
+                column(BVRGLDescription; BVRGLDescription)
+                {
+                }
                 column(BVRGLDebit; BVRGLDebit)
                 {
                 }
@@ -284,6 +355,9 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
                 {
                 }
                 column(BVRGLAccNameCaption; BVRGLAccNameCaptionLbl)
+                {
+                }
+                column(BVRGLDescCaption; BVRGLDescCaptionLbl)
                 {
                 }
                 column(BVRGLDebitCaption; BVRGLDebitCaptionLbl)
@@ -350,6 +424,7 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
                 begin
                     Clear(BVRGLAccNo);
                     Clear(BVRGLAccName);
+                    Clear(BVRGLDescription);
                     Clear(BVRGLDebit);
                     Clear(BVRGLCredit);
                     clear(BVRGLPostDate);
@@ -369,6 +444,11 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
 
                     BVRGLAccNo := BVRTempGLEntry."G/L Account No.";
                     BVRGLAccName := BVRGLPreview.GetAccountName(BVRTempGLEntry."G/L Account No.");
+                    // The entry's own description, as the preview built it - not the journal line's.
+                    // Posting can rewrite it (a blank line description falls back to the document,
+                    // and some postings compose their own), so this is what would really be on the
+                    // G/L entry.   //AAV.SP
+                    BVRGLDescription := BVRTempGLEntry.Description;
                     BVRGLDebit := BVRTempGLEntry."Debit Amount";
                     BVRGLCredit := BVRTempGLEntry."Credit Amount";
                     BVRGLPostDate := Format(BVRTempGLEntry."Posting Date");
@@ -422,6 +502,42 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
         BVRStatusShown := false;
 
         BVRPreviewOk := BVRGLPreview.BuildEntries(JournalTemplateName, JournalBatchName, BVRTempGLEntry, BVRStatusText);
+    end;
+
+    // Debit and credit totals for the batch the given line belongs to.
+    //
+    // Read straight off Gen. Journal Line, through a copy of the filters the report itself is running
+    // under, so the total covers exactly the lines the report printed - the request page's posting
+    // date filter included - and nothing else. The template and batch are pinned again afterwards so
+    // the scope holds even if the data item link is not carried by CopyFilters.
+    //
+    // Computed once per batch and cached: the column expression behind it runs on every journal line,
+    // and re-reading the whole batch each time would turn a linear report into a quadratic one.
+    //   //AAV.SP
+    local procedure BVRBatchTotal(var BVRGenJnlLine: Record "Gen. Journal Line"; BVRWantCredit: Boolean): Decimal
+    var
+        BVRTotalLine: Record "Gen. Journal Line";
+        BatchKey: Text;
+    begin
+        BatchKey := BVRGenJnlLine."Journal Template Name" + '|' + BVRGenJnlLine."Journal Batch Name";
+        if BatchKey <> BVRTotalsBatchKey then begin
+            BVRTotalsBatchKey := BatchKey;
+            BVRBatchDebit := 0;
+            BVRBatchCredit := 0;
+
+            BVRTotalLine.CopyFilters(BVRGenJnlLine);
+            BVRTotalLine.SetRange("Journal Template Name", BVRGenJnlLine."Journal Template Name");
+            BVRTotalLine.SetRange("Journal Batch Name", BVRGenJnlLine."Journal Batch Name");
+            if BVRTotalLine.FindSet() then
+                repeat
+                    BVRBatchDebit += BVRTotalLine."Debit Amount";
+                    BVRBatchCredit += BVRTotalLine."Credit Amount";
+                until BVRTotalLine.Next() = 0;
+        end;
+
+        if BVRWantCredit then
+            exit(BVRBatchCredit);
+        exit(BVRBatchDebit);
     end;
 
     // Sets up the applied-entry rows for one journal line and returns how many rows to print.
@@ -528,6 +644,79 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
         exit(false);
     end;
 
+    // The G/L account the line will really hit, read from the posting setup instead of from the line.
+    // A customer line names a customer, not an account - it is the customer's posting group that says
+    // which receivables account the entry lands in. Vendors, banks, employees and fixed assets work
+    // the same way; a G/L line already names its account and is returned unchanged.
+    //
+    // "Posting Group" on the line wins where it is filled in: BC lets a line override the master
+    // record's group, and the entry follows the override, so the report has to as well.
+    //
+    // Blank where the setup cannot answer - a missing group, a type with no posting setup (IC
+    // Partner, Allocation Account), or a fixed asset line posting something other than acquisition
+    // cost, where the account depends on the FA Posting Type and there is no single right answer.
+    // A blank cell says "look at this"; a guessed account would not.   //AAV.SP
+    local procedure BVRPostingSetupAccount(var BVRGenJnlLine: Record "Gen. Journal Line"): Code[20]
+    var
+        BVRCustomer: Record Customer;
+        BVRVendor: Record Vendor;
+        BVRBankAccount: Record "Bank Account";
+        BVREmployee: Record Employee;
+        BVRFixedAsset: Record "Fixed Asset";
+        BVRCustPostingGroup: Record "Customer Posting Group";
+        BVRVendPostingGroup: Record "Vendor Posting Group";
+        BVRBankPostingGroup: Record "Bank Account Posting Group";
+        BVREmplPostingGroup: Record "Employee Posting Group";
+        BVRFAPostingGroup: Record "FA Posting Group";
+        BVRGroupCode: Code[20];
+    begin
+        if BVRGenJnlLine."Account No." = '' then
+            exit('');
+
+        case BVRGenJnlLine."Account Type" of
+            BVRGenJnlLine."Account Type"::"G/L Account":
+                exit(BVRGenJnlLine."Account No.");
+            BVRGenJnlLine."Account Type"::Customer:
+                begin
+                    BVRGroupCode := BVRGenJnlLine."Posting Group";
+                    if BVRGroupCode = '' then
+                        if BVRCustomer.Get(BVRGenJnlLine."Account No.") then
+                            BVRGroupCode := BVRCustomer."Customer Posting Group";
+                    if BVRCustPostingGroup.Get(BVRGroupCode) then
+                        exit(BVRCustPostingGroup."Receivables Account");
+                end;
+            BVRGenJnlLine."Account Type"::Vendor:
+                begin
+                    BVRGroupCode := BVRGenJnlLine."Posting Group";
+                    if BVRGroupCode = '' then
+                        if BVRVendor.Get(BVRGenJnlLine."Account No.") then
+                            BVRGroupCode := BVRVendor."Vendor Posting Group";
+                    if BVRVendPostingGroup.Get(BVRGroupCode) then
+                        exit(BVRVendPostingGroup."Payables Account");
+                end;
+            BVRGenJnlLine."Account Type"::"Bank Account":
+                if BVRBankAccount.Get(BVRGenJnlLine."Account No.") then
+                    if BVRBankPostingGroup.Get(BVRBankAccount."Bank Acc. Posting Group") then
+                        exit(BVRBankPostingGroup."G/L Account No.");
+            BVRGenJnlLine."Account Type"::Employee:
+                begin
+                    BVRGroupCode := BVRGenJnlLine."Posting Group";
+                    if BVRGroupCode = '' then
+                        if BVREmployee.Get(BVRGenJnlLine."Account No.") then
+                            BVRGroupCode := BVREmployee."Employee Posting Group";
+                    if BVREmplPostingGroup.Get(BVRGroupCode) then
+                        exit(BVREmplPostingGroup."Payables Account");
+                end;
+            BVRGenJnlLine."Account Type"::"Fixed Asset":
+                if BVRGenJnlLine."FA Posting Type" = BVRGenJnlLine."FA Posting Type"::"Acquisition Cost" then
+                    if BVRFixedAsset.Get(BVRGenJnlLine."Account No.") then
+                        if BVRFAPostingGroup.Get(BVRFixedAsset."FA Posting Group") then
+                            exit(BVRFAPostingGroup."Acquisition Cost Account");
+        end;
+
+        exit('');
+    end;
+
     local procedure BVRIsApplicableAccount(BVRAccType: Enum "Gen. Journal Account Type"): Boolean
     begin
         exit(BVRAccType in [BVRAccType::Customer, BVRAccType::Vendor, BVRAccType::Employee]);
@@ -538,9 +727,13 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
         BVRGLPreview: Codeunit "BVR Gen Jnl GL Preview";
         BVRShownDocNos: List of [Code[20]];
         BVRPreparedBatchKey: Text;
+        BVRTotalsBatchKey: Text;
+        BVRBatchDebit: Decimal;
+        BVRBatchCredit: Decimal;
         BVRStatusText: Text;
         BVRGLAccNo: Code[20];
         BVRGLAccName: Text[100];
+        BVRGLDescription: Text[100];
         BVRGLStatus: Text[250];
         BVRGLDebit: Decimal;
         BVRGLCredit: Decimal;
@@ -552,9 +745,14 @@ reportextension 50146 "BVR Gen Jnl Test Dim Ext" extends "General Journal - Test
         BVRGLEntriesCaptionLbl: Label 'Expected G/L Entries';
         BVRGLAccNoCaptionLbl: Label 'G/L Account No.';
         BVRGLAccNameCaptionLbl: Label 'Account Name';
+        BVRGLDescCaptionLbl: Label 'Description';
         BVRGLDebitCaptionLbl: Label 'Debit Amount';
         BVRGLCreditCaptionLbl: Label 'Credit Amount';
         BVRGLPostDateCaptionLbl: Label 'Posting Date';
+        BVRCustomerIdCaptionLbl: Label 'Customer ID';
+        BVRPostingAccountCaptionLbl: Label 'G/L Account No.';
+        BVRDebitCaptionLbl: Label 'Debit';
+        BVRCreditCaptionLbl: Label 'Credit';
         BVRNoDocEntriesMsg: Label 'The simulated posting produced no G/L entries for this document.';
         BVRCustLedgEntry: Record "Cust. Ledger Entry";
         BVRVendLedgEntry: Record "Vendor Ledger Entry";

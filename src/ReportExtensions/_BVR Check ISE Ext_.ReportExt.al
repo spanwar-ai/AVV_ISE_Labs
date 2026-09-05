@@ -64,7 +64,7 @@ reportextension 50147 "BVR Check ISE Ext" extends "Check (Stub/Check/Stub)"
             //
             // Formatted with an explicit picture rather than Format(Date) so it reads mm/dd/yyyy in
             // every company, whatever the user's regional settings say.   //AAV.SP
-            column(BVRCheckDateMDY; Format("Posting Date", 0, '<Month,2>/<Day,2>/<Year4>'))
+            column(BVRCheckDateMDY; Format("Posting Date", 0, '<Month,2>/<Day,2>/<Year,4>'))
             {
             }
 
@@ -107,8 +107,13 @@ reportextension 50147 "BVR Check ISE Ext" extends "Check (Stub/Check/Stub)"
             column(BVRNetAmountPaidCaption; BVRNetAmountPaidCaptionLbl)
             {
             }
+            column(AmountInWordsFull; AmountToWordsMgt.AmountToWords(Abs(GenJnlLine.Amount), GenJnlLine."Currency Code"))
+            {
+            }
         }
+
     }
+
 
     rendering
     {
@@ -134,4 +139,5 @@ reportextension 50147 "BVR Check ISE Ext" extends "Check (Stub/Check/Stub)"
         BVRAmountPaidCaptionLbl: Label 'Amount Paid';
         BVRDiscountCaptionLbl: Label 'Discount';
         BVRNetAmountPaidCaptionLbl: Label 'Net Amount Paid';
+        AmountToWordsMgt: Codeunit "Amount To Words Mgt.";
 }

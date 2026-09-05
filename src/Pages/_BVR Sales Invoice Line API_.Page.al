@@ -3,7 +3,7 @@ page 50171 "BVR Sales Invoice Line API"
     // The lines of "BVR Sales Invoice API". Reachable both as a nested collection inside a single
     // POST of the invoice, and on its own:
     //
-    //   POST /api/ise/integration/v1.0/companies({id})/salesInvoices({id})/salesInvoiceLines
+    //   POST /api/ise/integration/v1.0/companies({id})/iseSalesInvoices({id})/iseSalesInvoiceLines
     //   { "lineType": "Account", "lineObjectNumber": "4010",
     //     "description": "Trade Sales - Domestic", "quantity": 1, "unitPrice": 2972.50,
     //     "shipmentDate": "2025-10-21",
@@ -18,8 +18,8 @@ page 50171 "BVR Sales Invoice Line API"
     APIPublisher = 'ise';
     APIGroup = 'integration';
     APIVersion = 'v1.0';
-    EntityName = 'salesInvoiceLine';
-    EntitySetName = 'salesInvoiceLines';
+    EntityName = 'iseSalesInvoiceLine';
+    EntitySetName = 'iseSalesInvoiceLines';
     EntityCaption = 'Sales Invoice Line';
     EntitySetCaption = 'Sales Invoice Lines';
     Caption = 'Sales Invoice Line API';

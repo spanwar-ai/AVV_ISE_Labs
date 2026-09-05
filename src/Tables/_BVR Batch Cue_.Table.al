@@ -83,6 +83,30 @@ table 50152 "BVR Batch Cue"
                                                       "BVR Doc Batch No." = filter(<> ''),
                                                       Status = const(Released)));
         }
+        // Sitting with the AP team. Stage 1 of both approval flows parks a document at
+        // "Sent to AP Team" while the AP team fills in the vendor and expense accrual accounts; it
+        // moves on only when an AP user submits it for approval. Nobody else can clear these, so a
+        // number here is work the AP team owes back.
+        //
+        // Counted by status alone. Only a document in the flow can reach that status, so no
+        // "requires approval" filter is needed to keep ordinary receipts out - it is unreachable for
+        // them.   //AAV.SP
+        field(30; "Custom Receipts with AP Team"; Integer)
+        {
+            Caption = 'Custom Receipts with AP Team';
+            Editable = false;
+            FieldClass = FlowField;
+            CalcFormula = count("Purchase Header" where("Document Type" = const(Order),
+                                                         "BVR Receive PO" = const(true),
+                                                         "BVR Receipt Status" = const("Sent to AP Team")));
+        }
+        field(31; "Whse. Receipts with AP Team"; Integer)
+        {
+            Caption = 'Warehouse Receipts with AP Team';
+            Editable = false;
+            FieldClass = FlowField;
+            CalcFormula = count("Warehouse Receipt Header" where("BVR Receipt Status" = const("Sent to AP Team")));
+        }
     }
 
     keys

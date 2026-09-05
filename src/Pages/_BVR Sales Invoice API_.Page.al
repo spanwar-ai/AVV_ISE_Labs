@@ -4,7 +4,7 @@ page 50170 "BVR Sales Invoice API"
     // sends. The field names are Microsoft's own salesInvoices vocabulary, so a client written
     // against the standard API needs no changes to point at this one.
     //
-    //   POST /api/ise/integration/v1.0/companies({id})/salesInvoices
+    //   POST /api/ise/integration/v1.0/companies({id})/iseSalesInvoices
     //   {
     //     "number": "PIN20251200000",
     //     "customerNumber": "CS2018040003",
@@ -16,7 +16,7 @@ page 50170 "BVR Sales Invoice API"
     //     "currencyCode": "USD",
     //     "shortcutDimension1Code": "ADMIN",
     //     "shortcutDimension2Code": "SITE-A",
-    //     "salesInvoiceLines": [ { "lineType": "Account", "lineObjectNumber": "4010", ... } ]
+    //     "iseSalesInvoiceLines": [ { "lineType": "Account", "lineObjectNumber": "4010", ... } ]
     //   }
     //
     // The invoice is created OPEN, not posted. Posting is a separate decision with its own approval
@@ -26,8 +26,8 @@ page 50170 "BVR Sales Invoice API"
     APIPublisher = 'ise';
     APIGroup = 'integration';
     APIVersion = 'v1.0';
-    EntityName = 'salesInvoice';
-    EntitySetName = 'salesInvoices';
+    EntityName = 'iseSalesInvoice';
+    EntitySetName = 'iseSalesInvoices';
     EntityCaption = 'Sales Invoice';
     EntitySetCaption = 'Sales Invoices';
     Caption = 'Sales Invoice API';
@@ -105,11 +105,11 @@ page 50170 "BVR Sales Invoice API"
                     Caption = 'Last Modified Date';
                     Editable = false;
                 }
-                part(salesInvoiceLines; "BVR Sales Invoice Line API")
+                part(iseSalesInvoiceLines; "BVR Sales Invoice Line API")
                 {
                     Caption = 'Lines';
-                    EntityName = 'salesInvoiceLine';
-                    EntitySetName = 'salesInvoiceLines';
+                    EntityName = 'iseSalesInvoiceLine';
+                    EntitySetName = 'iseSalesInvoiceLines';
                     SubPageLink = "Document Type" = field("Document Type"), "Document No." = field("No.");
                 }
             }
