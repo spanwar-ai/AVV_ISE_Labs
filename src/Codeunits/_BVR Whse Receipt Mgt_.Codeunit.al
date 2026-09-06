@@ -112,6 +112,8 @@ codeunit 50129 "BVR Whse Receipt Mgt"
         if (PurchaseHeader."BVR Vendor Accrual Acc No." = WarehouseReceiptHeader."BVR Vendor Accrual Acc No.") and
            (PurchaseHeader."BVR Expense Accrual Acc No." = WarehouseReceiptHeader."BVR Expense Accrual Acc No.") and
            (PurchaseHeader."BVR WH Shortcut Dim 1 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code") and
+           (PurchaseHeader."BVR Vendor Accrual Dim 1 Code" = WarehouseReceiptHeader."BVR Vendor Accrual Dim 1 Code") and   //AAV.SP
+           (PurchaseHeader."BVR Vendor Accrual Dim 2 Code" = WarehouseReceiptHeader."BVR Vendor Accrual Dim 2 Code") and   //AAV.SP
            (PurchaseHeader."Posting Description" = WarehouseReceiptHeader."BVR Posting Description")   //AAV.SP
         //   (PurchaseHeader."BVR WH Shortcut Dim 2 Code" = WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code")
         then
@@ -120,6 +122,12 @@ codeunit 50129 "BVR Whse Receipt Mgt"
         PurchaseHeader."BVR Expense Accrual Acc No." := WarehouseReceiptHeader."BVR Expense Accrual Acc No.";
         PurchaseHeader."BVR WH Shortcut Dim 1 Code" := WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code";
         PurchaseHeader."BVR WH Shortcut Dim 2 Code" := WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code";
+        // The vendor side's own dimensions travel the same road, and for the same reason: they are
+        // meant to dimension the ACCRUAL entry only, so they go into fields of ours rather than into
+        // the order's real shortcut dimensions, which would cascade onto every purchase line.
+        //   //AAV.SP
+        PurchaseHeader."BVR Vendor Accrual Dim 1 Code" := WarehouseReceiptHeader."BVR Vendor Accrual Dim 1 Code";
+        PurchaseHeader."BVR Vendor Accrual Dim 2 Code" := WarehouseReceiptHeader."BVR Vendor Accrual Dim 2 Code";
         // The order's STANDARD "Posting Description", not one of ours: that is the field Purch.-Post
         // carries onto the posted receipt, and the one that describes the entries this posting books.
         //

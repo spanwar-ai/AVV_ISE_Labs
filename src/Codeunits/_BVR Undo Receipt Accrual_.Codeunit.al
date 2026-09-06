@@ -89,9 +89,6 @@ codeunit 50124 "BVR Undo Receipt Accrual"
     //    (header) dimension set the original clubbed accrual used.   //AAV.SP
     local procedure ReverseAccrualEntry(var RcptHdr: Record "Purch. Rcpt. Header"; var RcptLine: Record "Purch. Rcpt. Line")
     var
-        GenJnlLine: Record "Gen. Journal Line";
-        GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
-        DimMgt: Codeunit DimensionManagement;
         StdRcptAccrual: Codeunit "BVR Std Rcpt Accrual";
     begin
         if RcptLine."BVR Accrued Amount" = 0 then
@@ -99,40 +96,26 @@ codeunit 50124 "BVR Undo Receipt Accrual"
         RcptHdr.TestField("BVR Expense Accrual Acc No.");
         RcptHdr.TestField("BVR Vendor Accrual Acc No.");
 
-        Clear(GenJnlLine);
-        GenJnlLine.Init();
-        GenJnlLine.Validate("Journal Template Name", 'GENERAL');
-        GenJnlLine.Validate("Journal Batch Name", 'DEFAULT');
-        GenJnlLine.Validate("Posting Date", RcptHdr."Posting Date");
-        GenJnlLine.Validate("Document Date", RcptHdr."Posting Date");
-        GenJnlLine.Validate("Document Type", GenJnlLine."Document Type"::Invoice);
-        GenJnlLine.Validate("Document No.", RcptHdr."No.");
-        GenJnlLine.Validate("Account Type", GenJnlLine."Account Type"::"G/L Account");
-        GenJnlLine.Validate("Account No.", RcptHdr."BVR Expense Accrual Acc No.");
-        GenJnlLine.Validate(Amount, -RcptLine."BVR Accrued Amount");
-        GenJnlLine.Validate("Bal. Account Type", GenJnlLine."Bal. Account Type"::"G/L Account");
-        GenJnlLine.Validate("Bal. Account No.", RcptHdr."BVR Vendor Accrual Acc No.");
-        // Must mirror the accrual in codeunit "BVR Std Rcpt Accrual" exactly - both the shortcut
-        // codes AND the warehouse-dimension override. G/L Entry reads its Global Dimension 1/2
-        // columns from the SHORTCUT codes, so reversing with the set alone, or without the warehouse
-        // override, would net to zero in total but NOT per dimension, leaving permanent phantom
-        // balances on the accrual accounts by dimension.
-        // The warehouse dimensions reach the posted receipt via Purch.-Post's TransferFields (same
-        // field numbers 50108/50109 on both headers).   //AAV.SP
-        GenJnlLine."Dimension Set ID" := RcptHdr."Dimension Set ID";
-        DimMgt.UpdateGlobalDimFromDimSetID(
-            GenJnlLine."Dimension Set ID",
-            GenJnlLine."Shortcut Dimension 1 Code",
-            GenJnlLine."Shortcut Dimension 2 Code");
-        if RcptHdr."BVR WH Shortcut Dim 1 Code" <> '' then
-            GenJnlLine.Validate("Shortcut Dimension 1 Code", RcptHdr."BVR WH Shortcut Dim 1 Code");
-        if RcptHdr."BVR WH Shortcut Dim 2 Code" <> '' then
-            GenJnlLine.Validate("Shortcut Dimension 2 Code", RcptHdr."BVR WH Shortcut Dim 2 Code");
-        // The same description as the accrual it reverses, from the same one place. Left unset it
-        // defaulted to the G/L account's name, so the two halves of a reversed accrual read as
-        // unrelated entries on the account - the pair has to be recognisable as a pair.   //AAV.SP
-        GenJnlLine.Description := StdRcptAccrual.AccrualDescription(RcptHdr);
-        GenJnlPostLine.RunWithCheck(GenJnlLine);
+        // Built by the SAME routine that posted the accrual, with the sign flipped. That is the whole
+        // point of it being shared: the reversal has to mirror the accrual entry for entry, including
+        // which dimensions each SIDE carries. G/L Entry reads its Global Dimension 1/2 columns from
+        // the journal line's shortcut codes, so a reversal that differs by dimension nets to zero in
+        // total while leaving permanent phantom balances on the accrual accounts by dimension.
+        //
+        // Every dimension it needs is on the posted receipt already: Purch.-Post's TransferFields
+        // carries them from the order under matching field numbers - 50108/50109 for the expense side,
+        // 50111/50112 for the vendor side.   //AAV.SP
+        StdRcptAccrual.PostAccrualPair(
+            RcptHdr,
+            RcptHdr."Posting Date",
+            '',
+            RcptHdr."BVR Expense Accrual Acc No.",
+            RcptHdr."BVR Vendor Accrual Acc No.",
+            -RcptLine."BVR Accrued Amount",
+            RcptHdr."BVR WH Shortcut Dim 1 Code",
+            RcptHdr."BVR WH Shortcut Dim 2 Code",
+            RcptHdr."BVR Vendor Accrual Dim 1 Code",
+            RcptHdr."BVR Vendor Accrual Dim 2 Code");
     end;
 
     // 3. Give the received quantity back to the source PO line.   //AAV.SP

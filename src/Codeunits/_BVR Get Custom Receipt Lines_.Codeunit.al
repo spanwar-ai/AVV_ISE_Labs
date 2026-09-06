@@ -29,6 +29,14 @@ codeunit 50141 "BVR Get Custom Receipt Lines"
         RcptLine.SetRange("BVR Custom Receipt", true);
         if RcptLine.FindSet()then InvHdr."BVR Vendor Accrual Acc No.":=RcpHdr."BVR Vendor Accrual Acc No.";
         InvHdr."BVR Expense Accrual Acc No.":=RcpHdr."BVR Expense Accrual Acc No.";
+        // The accrual dimensions travel with the accrual accounts. Without them the invoice would
+        // reverse the vendor accrual under the invoice's own dimensions instead of the ones the
+        // receipt accrued under, and the accrual account would net to zero in total while carrying
+        // permanent balances per dimension.   //AAV.SP
+        InvHdr."BVR WH Shortcut Dim 1 Code" := RcpHdr."BVR WH Shortcut Dim 1 Code";
+        InvHdr."BVR WH Shortcut Dim 2 Code" := RcpHdr."BVR WH Shortcut Dim 2 Code";
+        InvHdr."BVR Vendor Accrual Dim 1 Code" := RcpHdr."BVR Vendor Accrual Dim 1 Code";
+        InvHdr."BVR Vendor Accrual Dim 2 Code" := RcpHdr."BVR Vendor Accrual Dim 2 Code";
         InvHdr.Modify();
         repeat RemQty:=RcptLine.Quantity - RcptLine."BVR Invoiced Qty";
             if RemQty <= 0 then continue;

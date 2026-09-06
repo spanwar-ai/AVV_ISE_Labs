@@ -14,9 +14,6 @@ codeunit 50125 "BVR Std Rcpt Accrual"
     var
         RcptHdr: Record "Purch. Rcpt. Header";
         RcptLine: Record "Purch. Rcpt. Line";
-        GenJnlLine: Record "Gen. Journal Line";
-        GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
-        DimMgt: Codeunit DimensionManagement;
         TotalAccrualAmt: Decimal;
     begin
         // Custom-receipt POs accrue via BVR Custom Rcpt Post V2 - avoid double posting.
@@ -43,22 +40,88 @@ codeunit 50125 "BVR Std Rcpt Accrual"
 
         if TotalAccrualAmt = 0 then exit;
 
-        // Same entry as the custom flow: Dr Expense Accrual / Cr Vendor Accrual.
+        // Same entry as the custom flow: Dr Expense Accrual / Cr Vendor Accrual - but as two lines,
+        // so each side can carry its own dimensions. See PostAccrualPair.   //AAV.SP
+        PostAccrualPair(
+            RcptHdr,
+            RcptHdr."Document Date",
+            PurchaseHeader."Vendor Invoice No.",
+            PurchaseHeader."BVR Expense Accrual Acc No.",
+            PurchaseHeader."BVR Vendor Accrual Acc No.",
+            TotalAccrualAmt,
+            PurchaseHeader."BVR WH Shortcut Dim 1 Code",
+            PurchaseHeader."BVR WH Shortcut Dim 2 Code",
+            PurchaseHeader."BVR Vendor Accrual Dim 1 Code",
+            PurchaseHeader."BVR Vendor Accrual Dim 2 Code");
+    end;
+
+    // Posts the accrual as a PAIR of journal lines instead of one line with a balancing account.
+    //
+    // It has to be a pair. A Gen. Journal Line carries exactly ONE dimension set, and
+    // "Gen. Jnl.-Post Line" stamps it on the balancing entry as well - the table has no
+    // "Bal. Dimension Set ID" to set. So the only way the Vendor Accrual side can post under its own
+    // dimensions is for it to BE its own line.
+    //
+    // The two lines share Document No. and Posting Date and go through the SAME "Gen. Jnl.-Post Line"
+    // instance, so they land in one transaction that nets to zero - exactly what the single line with
+    // a balancing account produced. The G/L entries are the same two entries as before; only the
+    // journal shape changed.
+    //
+    // Both the accrual and its reversal come through here, deliberately. They have to agree on the
+    // dimensions entry for entry: netting to zero in TOTAL while differing by DIMENSION leaves
+    // permanent phantom balances on the accrual accounts, and two copies of this logic is precisely
+    // how that would come about.   //AAV.SP
+    procedure PostAccrualPair(var RcptHdr: Record "Purch. Rcpt. Header"; DocumentDate: Date;
+                              ExternalDocNo: Code[35]; ExpenseAccNo: Code[20];
+                              VendorAccrualAccNo: Code[20]; ExpenseAmount: Decimal;
+                              ExpenseDim1: Code[20]; ExpenseDim2: Code[20];
+                              VendorDim1: Code[20]; VendorDim2: Code[20])
+    var
+        GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
+    begin
+        if ExpenseAmount = 0 then
+            exit;
+
+        // A vendor accrual account with no default dimension of its own falls back to the expense
+        // side's, which is what every accrual posted before these fields existed did. Blank here means
+        // "same as the other side", never "post with no dimension".   //AAV.SP
+        if VendorDim1 = '' then
+            VendorDim1 := ExpenseDim1;
+        if VendorDim2 = '' then
+            VendorDim2 := ExpenseDim2;
+
+        PostAccrualSide(
+            GenJnlPostLine, RcptHdr, DocumentDate, ExternalDocNo,
+            ExpenseAccNo, ExpenseAmount, ExpenseDim1, ExpenseDim2);
+        PostAccrualSide(
+            GenJnlPostLine, RcptHdr, DocumentDate, ExternalDocNo,
+            VendorAccrualAccNo, -ExpenseAmount, VendorDim1, VendorDim2);
+    end;
+
+    // One side of the accrual. No balancing account: this line IS one side, its partner is the other.
+    local procedure PostAccrualSide(var GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
+                                    var RcptHdr: Record "Purch. Rcpt. Header"; DocumentDate: Date;
+                                    ExternalDocNo: Code[35]; AccNo: Code[20]; Amt: Decimal;
+                                    Dim1: Code[20]; Dim2: Code[20])
+    var
+        GenJnlLine: Record "Gen. Journal Line";
+        DimMgt: Codeunit DimensionManagement;
+    begin
         Clear(GenJnlLine);
         GenJnlLine.Init();
         GenJnlLine.Validate("Journal Template Name", 'GENERAL');
         GenJnlLine.Validate("Journal Batch Name", 'DEFAULT');
         GenJnlLine.Validate("Posting Date", RcptHdr."Posting Date");
-        GenJnlLine.Validate("Document Date", RcptHdr."Document Date");
+        GenJnlLine.Validate("Document Date", DocumentDate);
         GenJnlLine.Validate("Document Type", GenJnlLine."Document Type"::Invoice);
         GenJnlLine.Validate("Document No.", RcptHdr."No.");
-        GenJnlLine.Validate("External Document No.", PurchaseHeader."Vendor Invoice No.");
+        if ExternalDocNo <> '' then
+            GenJnlLine.Validate("External Document No.", ExternalDocNo);
         GenJnlLine.Validate("Account Type", GenJnlLine."Account Type"::"G/L Account");
-        GenJnlLine.Validate("Account No.", PurchaseHeader."BVR Expense Accrual Acc No.");
-        GenJnlLine.Validate(Amount, TotalAccrualAmt);
-        GenJnlLine.Validate("Bal. Account Type", GenJnlLine."Bal. Account Type"::"G/L Account");
-        GenJnlLine.Validate("Bal. Account No.", PurchaseHeader."BVR Vendor Accrual Acc No.");
-        // Lines are clubbed into one entry, so start from the order's header dimensions...
+        GenJnlLine.Validate("Account No.", AccNo);
+        GenJnlLine.Validate(Amount, Amt);
+
+        // Start from the receipt's own header dimensions...
         //
         // Both parts are required. G/L Entry.CopyFromGenJnlLine takes "Global Dimension 1/2 Code"
         // from the journal line's SHORTCUT codes and "Dimension Set ID" from the set - they are
@@ -66,16 +129,19 @@ codeunit 50125 "BVR Std Rcpt Accrual"
         // right but whose Global Dimension 1/2 columns are BLANK, which is what dimension-based
         // analysis and most reports actually read. UpdateGlobalDimFromDimSetID derives the two
         // shortcut codes back out of the set, keeping them consistent.   //AAV.SP
-        GenJnlLine."Dimension Set ID" := PurchaseHeader."Dimension Set ID";
+        GenJnlLine."Dimension Set ID" := RcptHdr."Dimension Set ID";
         DimMgt.UpdateGlobalDimFromDimSetID(
             GenJnlLine."Dimension Set ID",
             GenJnlLine."Shortcut Dimension 1 Code",
             GenJnlLine."Shortcut Dimension 2 Code");
-        // ...then let the warehouse dimensions carried over from the Warehouse Receipt override the
-        // two globals. Validate (not assignment) so the Dimension Set ID is rebuilt to match the new
-        // codes - it applies a delta, so any NON-global dimensions on the order survive.
-        // A blank warehouse dimension means "keep the order's own", not "clear it".   //AAV.SP
-        ApplyWarehouseDimensions(PurchaseHeader, GenJnlLine);
+        // ...then let THIS side's own codes override the two globals. Validate (not assignment) so the
+        // Dimension Set ID is rebuilt to match - it applies a delta, so any NON-global dimensions on
+        // the receipt survive. A blank code means "keep the receipt's own", not "clear it".   //AAV.SP
+        if Dim1 <> '' then
+            GenJnlLine.Validate("Shortcut Dimension 1 Code", Dim1);
+        if Dim2 <> '' then
+            GenJnlLine.Validate("Shortcut Dimension 2 Code", Dim2);
+
         GenJnlLine.Description := AccrualDescription(RcptHdr);
         GenJnlPostLine.RunWithCheck(GenJnlLine);
     end;
@@ -106,18 +172,6 @@ codeunit 50125 "BVR Std Rcpt Accrual"
 
     var
         AccrualDescTxt: Label 'Receipt accrual %1', Comment = '%1 = posted purchase receipt no.';
-
-    // Override the accrual line's two global dimensions with the ones the AP team entered on the
-    // Warehouse Receipt (stamped onto the PO header by codeunit "BVR Whse Receipt Mgt"). This is the
-    // ONLY place those dimensions are applied - the Purchase Order's own dimensions, its Dimension
-    // Set ID and its lines are never modified by the warehouse flow.   //AAV.SP
-    local procedure ApplyWarehouseDimensions(var PurchaseHeader: Record "Purchase Header"; var GenJnlLine: Record "Gen. Journal Line")
-    begin
-        if PurchaseHeader."BVR WH Shortcut Dim 1 Code" <> '' then
-            GenJnlLine.Validate("Shortcut Dimension 1 Code", PurchaseHeader."BVR WH Shortcut Dim 1 Code");
-        if PurchaseHeader."BVR WH Shortcut Dim 2 Code" <> '' then
-            GenJnlLine.Validate("Shortcut Dimension 2 Code", PurchaseHeader."BVR WH Shortcut Dim 2 Code");
-    end;
 
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Copy Document Mgt.", OnBeforeInsertToPurchLine, '', false, false)]
     local procedure OnBeforeInsertToPurchLine(FromPurchLine: Record "Purchase Line"; var ToPurchLine: Record "Purchase Line")

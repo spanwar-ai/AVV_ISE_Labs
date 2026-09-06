@@ -30,6 +30,14 @@ codeunit 50140 "BVR Create Custom Invoice"
         InvHdr."Vendor Invoice No." := RcptOrder."Vendor Invoice No.";
         InvHdr."BVR Vendor Accrual Acc No." := RcptOrder."BVR Vendor Accrual Acc No.";
         InvHdr."BVR Expense Accrual Acc No." := RcptOrder."BVR Expense Accrual Acc No.";
+        // The accrual dimensions travel with the accrual accounts. Without them the invoice would
+        // reverse the vendor accrual under the invoice's own dimensions instead of the ones the
+        // receipt accrued under, and the accrual account would net to zero in total while carrying
+        // permanent balances per dimension.   //AAV.SP
+        InvHdr."BVR WH Shortcut Dim 1 Code" := RcptOrder."BVR WH Shortcut Dim 1 Code";
+        InvHdr."BVR WH Shortcut Dim 2 Code" := RcptOrder."BVR WH Shortcut Dim 2 Code";
+        InvHdr."BVR Vendor Accrual Dim 1 Code" := RcptOrder."BVR Vendor Accrual Dim 1 Code";
+        InvHdr."BVR Vendor Accrual Dim 2 Code" := RcptOrder."BVR Vendor Accrual Dim 2 Code";
         InvHdr.Modify(true);
         rcptOrder."BVR Custom Invoice No." := InvHdr."No.";
         rcptOrder.Modify();

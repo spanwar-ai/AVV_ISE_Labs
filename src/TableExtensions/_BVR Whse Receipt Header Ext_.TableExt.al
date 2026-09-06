@@ -15,6 +15,11 @@ tableextension 50122 "BVR Whse Receipt Header Ext" extends "Warehouse Receipt He
             Caption = 'Vendor Accrual Account';
             DataClassification = CustomerContent;
             TableRelation = "G/L Account"."No.";
+
+            trigger OnValidate()
+            begin
+                BVRSetVendorAccrualDimensions();
+            end;
         }
         field(50101; "BVR Expense Accrual Acc No."; Code[20])
         {
@@ -96,7 +101,70 @@ tableextension 50122 "BVR Whse Receipt Header Ext" extends "Warehouse Receipt He
             Caption = 'Posting Description';
             DataClassification = CustomerContent;
         }
+        // The Vendor Accrual account's OWN dimensions, as opposed to the two above, which dimension
+        // the expense side. Filled in from the account's default dimensions the moment the account is
+        // entered, and carried from here to the accrual entry's vendor line by codeunits
+        // "BVR Whse Receipt Mgt" -> "BVR Std Rcpt Accrual".
+        //
+        // Derived, never typed: they are deliberately not on the Warehouse Receipt page. Nothing is
+        // lost by that - the value always comes from the account's setup - and a field the AP team
+        // could edit would be a field that could disagree with the account it belongs to.   //AAV.SP
+        field(50109; "BVR Vendor Accrual Dim 1 Code"; Code[20])
+        {
+            Caption = 'Vendor Accrual Dimension 1 Code';
+            DataClassification = CustomerContent;
+            Editable = false;
+            TableRelation = "Dimension Value".Code where("Global Dimension No." = const(1),
+                                                          Blocked = const(false));
+        }
+        field(50110; "BVR Vendor Accrual Dim 2 Code"; Code[20])
+        {
+            Caption = 'Vendor Accrual Dimension 2 Code';
+            DataClassification = CustomerContent;
+            Editable = false;
+            TableRelation = "Dimension Value".Code where("Global Dimension No." = const(2),
+                                                          Blocked = const(false));
+        }
     }
+
+    // Capture the Vendor Accrual account's default dimensions onto the receipt.
+    //
+    // Read HERE, when the account is chosen, rather than at posting time. An account's default
+    // dimensions can be changed later, and an accrual has to reverse under the dimensions it actually
+    // posted under - see codeunit "BVR Undo Receipt Accrual". Freezing them on the receipt keeps the
+    // accrual and its reversal symmetrical however the setup moves in between.
+    //
+    // Both codes are cleared first, so clearing the account cannot leave dimensions behind that
+    // nothing on the receipt explains, and an account with no default for a global dimension leaves
+    // that code blank - which the posting side reads as "use the expense side's", not "post blank".
+    //   //AAV.SP
+    local procedure BVRSetVendorAccrualDimensions()
+    var
+        DefaultDimension: Record "Default Dimension";
+        GeneralLedgerSetup: Record "General Ledger Setup";
+    begin
+        Rec."BVR Vendor Accrual Dim 1 Code" := '';
+        Rec."BVR Vendor Accrual Dim 2 Code" := '';
+
+        if Rec."BVR Vendor Accrual Acc No." = '' then
+            exit;
+        if not GeneralLedgerSetup.Get() then
+            exit;
+
+        if GeneralLedgerSetup."Global Dimension 1 Code" <> '' then
+            if DefaultDimension.Get(
+                 Database::"G/L Account", Rec."BVR Vendor Accrual Acc No.",
+                 GeneralLedgerSetup."Global Dimension 1 Code")
+            then
+                Rec."BVR Vendor Accrual Dim 1 Code" := DefaultDimension."Dimension Value Code";
+
+        if GeneralLedgerSetup."Global Dimension 2 Code" <> '' then
+            if DefaultDimension.Get(
+                 Database::"G/L Account", Rec."BVR Vendor Accrual Acc No.",
+                 GeneralLedgerSetup."Global Dimension 2 Code")
+            then
+                Rec."BVR Vendor Accrual Dim 2 Code" := DefaultDimension."Dimension Value Code";
+    end;
 
     // What this receipt is about to bring in, in LCY.
     //

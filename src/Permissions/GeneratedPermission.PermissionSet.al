@@ -3,7 +3,7 @@ permissionset 50100 GeneratedPermission
     Assignable = true;
     Permissions = codeunit "BVR Create Custom Invoice" = X,
         codeunit "BVR Custom Inv Post" = X,
-        codeunit "BVR Custom Rcpt Post" = X,
+        // codeunit "BVR Custom Rcpt Post" = X,   // object commented out in _BVR Custom Rcpt Post_.Codeunit.al
         codeunit "BVR Get Custom Receipt Lines" = X,
         page "BVR Custom Purch Inv Lines" = X,
         page "BVR Custom Purch Invoice" = X,

@@ -68,6 +68,25 @@ tableextension 50110 "BVR Purch Header Ext" extends "Purchase Header"
             TableRelation = "Dimension Value".Code where("Global Dimension No." = const(2),
                                                           Blocked = const(false));
         }
+        // The Vendor Accrual account's own dimensions, from the Warehouse Receipt. Kept apart from the
+        // two above, which dimension the EXPENSE side of the same accrual entry.
+        //
+        // 50111/50112 deliberately match on "Purchase Header" and "Purch. Rcpt. Header", the way
+        // 50108/50109 do: Purch.-Post's TransferFields copies by field NUMBER, and that is the whole
+        // mechanism carrying these onto the posted receipt for "BVR Undo Receipt Accrual" to reverse
+        // under.   //AAV.SP
+        field(50111; "BVR Vendor Accrual Dim 1 Code"; Code[20])
+        {
+            Caption = 'Vendor Accrual Dimension 1 Code';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
+        field(50112; "BVR Vendor Accrual Dim 2 Code"; Code[20])
+        {
+            Caption = 'Vendor Accrual Dimension 2 Code';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
         // P2: Grouping + batch
         field(50120; "BVR Group No."; Code[20])
         {

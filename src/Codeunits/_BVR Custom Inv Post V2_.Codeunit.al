@@ -116,12 +116,15 @@ codeunit 50144 "BVR Custom Inv Post V2"
 
         // --- Pass 2: build the journal buffer (still no posting) ---
         // 1) Reverse vendor accrual for the receipt BASE amount:   Dr Vendor Accrual / Cr Payables
-        AddBufferLine(TempGenJnlLine, BufferLineNo, InvHdr, PostInvNo, VendAccrAcc, ReceiptBaseAmt, PayablesAcc, BalAccType::Vendor);
+        AddBufferLine(TempGenJnlLine, BufferLineNo, InvHdr, PostInvNo, VendAccrAcc, ReceiptBaseAmt, PayablesAcc, BalAccType::Vendor,
+                      InvHdr."BVR Vendor Accrual Dim 1 Code", InvHdr."BVR Vendor Accrual Dim 2 Code");
         // 2) Post BASE variance to expense (difference only):       Dr Expense / Cr Payables
-        AddBufferLine(TempGenJnlLine, BufferLineNo, InvHdr, PostInvNo, ExpAcc, DiffBase, PayablesAcc, BalAccType::Vendor);
+        AddBufferLine(TempGenJnlLine, BufferLineNo, InvHdr, PostInvNo, ExpAcc, DiffBase, PayablesAcc, BalAccType::Vendor,
+                      InvHdr."BVR WH Shortcut Dim 1 Code", InvHdr."BVR WH Shortcut Dim 2 Code");
         // 3) Post combined G/L Account lines, one entry per account: Dr G/L Account / Cr Payables
         foreach GLAcc in GLAccAmounts.Keys() do
-            AddBufferLine(TempGenJnlLine, BufferLineNo, InvHdr, PostInvNo, GLAcc, Round(GLAccAmounts.Get(GLAcc), 0.01), PayablesAcc, BalAccType::Vendor);
+            AddBufferLine(TempGenJnlLine, BufferLineNo, InvHdr, PostInvNo, GLAcc, Round(GLAccAmounts.Get(GLAcc), 0.01), PayablesAcc, BalAccType::Vendor,
+                          '', '');
 
         // --- Pass 3: post the whole buffer in one loop ---
         if TempGenJnlLine.FindSet() then
@@ -141,10 +144,16 @@ codeunit 50144 "BVR Custom Inv Post V2"
     end;
 
     // Builds one fully-validated Gen. Journal Line in the temp buffer (skips zero amounts).
+    // Dim1/Dim2 are the dimensions THIS line posts under, blank meaning "the invoice header's own".
+    // They exist so the vendor accrual reversal lands on the same dimensions the receipt accrued
+    // under - see codeunit "BVR Std Rcpt Accrual".   //AAV.SP
     local procedure AddBufferLine(var TempGenJnlLine: Record "Gen. Journal Line" temporary;
                                     var LineNo: Integer; InvHdr: Record "Purchase Header";
                                     DocNo: Code[20]; AccNo: Code[20]; Amt: Decimal;
-                                    BalAccNo: Code[20]; BalAccType: Enum "Gen. Journal Account Type")
+                                    BalAccNo: Code[20]; BalAccType: Enum "Gen. Journal Account Type";
+                                    Dim1: Code[20]; Dim2: Code[20])
+    var
+        DimMgt: Codeunit DimensionManagement;
     begin
         if Amt = 0 then
             exit;
@@ -165,9 +174,27 @@ codeunit 50144 "BVR Custom Inv Post V2"
         // TempGenJnlLine.Validate("Bal. Account No.", BalAccNo);
         tempGenJnlLine.Validate("Bal. Account Type", BalAccType);
         tempGenJnlLine.Validate("Bal. Account No.", BalAccNo);
-        // TempGenJnlLine.Validate("Shortcut Dimension 1 Code", InvHdr."Shortcut Dimension 1 Code");
-        // TempGenJnlLine.Validate("Shortcut Dimension 2 Code", InvHdr."Shortcut Dimension 2 Code");
+        // Start from the invoice header's dimension set, then derive the two SHORTCUT codes back out
+        // of it.
+        //
+        // Both parts are needed. G/L Entry.CopyFromGenJnlLine copies "Global Dimension 1/2 Code" from
+        // the line's shortcut codes and "Dimension Set ID" from the set, independently. Assigning only
+        // the set - which is all this did before - posts entries whose set is right but whose Global
+        // Dimension 1/2 columns are BLANK, and those columns are what dimension analysis and most
+        // reports actually read.   //AAV.SP
         TempGenJnlLine."Dimension Set ID" := InvHdr."Dimension Set ID";
+        DimMgt.UpdateGlobalDimFromDimSetID(
+            TempGenJnlLine."Dimension Set ID",
+            TempGenJnlLine."Shortcut Dimension 1 Code",
+            TempGenJnlLine."Shortcut Dimension 2 Code");
+        // ...then let this line's own codes override the two globals, so the accrual reversal posts
+        // under the dimensions the receipt accrued under. Validate (not assignment) rebuilds the set to
+        // match - it applies a delta, so any NON-global dimensions on the invoice survive. Blank means
+        // "keep the invoice's own", never "post without a dimension".   //AAV.SP
+        if Dim1 <> '' then
+            TempGenJnlLine.Validate("Shortcut Dimension 1 Code", Dim1);
+        if Dim2 <> '' then
+            TempGenJnlLine.Validate("Shortcut Dimension 2 Code", Dim2);
         TempGenJnlLine.Insert();
     end;
 

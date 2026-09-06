@@ -48,6 +48,25 @@ tableextension 50115 "BVR Purch Rcpt Header Ext" extends "Purch. Rcpt. Header"
             DataClassification = CustomerContent;
             Editable = false;
         }
+        // The Vendor Accrual account's own dimensions, from the Warehouse Receipt. Kept apart from the
+        // two above, which dimension the EXPENSE side of the same accrual entry.
+        //
+        // 50111/50112 deliberately match on "Purchase Header" and "Purch. Rcpt. Header", the way
+        // 50108/50109 do: Purch.-Post's TransferFields copies by field NUMBER, and that is the whole
+        // mechanism carrying these onto the posted receipt for "BVR Undo Receipt Accrual" to reverse
+        // under.   //AAV.SP
+        field(50111; "BVR Vendor Accrual Dim 1 Code"; Code[20])
+        {
+            Caption = 'Vendor Accrual Dimension 1 Code';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
+        field(50112; "BVR Vendor Accrual Dim 2 Code"; Code[20])
+        {
+            Caption = 'Vendor Accrual Dimension 2 Code';
+            DataClassification = CustomerContent;
+            Editable = false;
+        }
         // The batch the source Warehouse Receipt was assigned to, stamped by codeunit
         // "BVR Whse Receipt Mgt" right after the receipt is posted.
         // 50110 is deliberately a number that does NOT exist on "Purchase Header": this value comes
