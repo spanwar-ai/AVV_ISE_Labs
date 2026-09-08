@@ -52,6 +52,7 @@ codeunit 50142 "BVR Custom Inv Post"
         GLTotal: Decimal;
         GLAmt: Decimal;
         GLAcc: Code[20];
+        BVRUserSetup: Record "User Setup";
         GLAccAmounts: Dictionary of [Code[20], Decimal];
     begin
         InvHdr.TestField("Document Type", InvHdr."Document Type"::Invoice);
@@ -62,6 +63,11 @@ codeunit 50142 "BVR Custom Inv Post"
         InvHdr.TestField("BVR Expense Accrual Acc No.");
         if InvHdr."BVR Custom Inv Posted" then
             Error('Already posted. Posted Invoice No.: %1', InvHdr."BVR Posted Inv No.");
+
+        // Superseded by "BVR Custom Inv Post V2" - the page posts through that one - but this object
+        // still exists and still posts to the G/L, so it is gated too rather than left as a way round
+        // the flag.   //AAV.SP
+        BVRUserSetup.BVRCheckGLPostingAllowed();
         VendAccrAcc := InvHdr."BVR Vendor Accrual Acc No.";
         ExpAcc := InvHdr."BVR Expense Accrual Acc No.";
         Vend.Get(InvHdr."Pay-to Vendor No.");

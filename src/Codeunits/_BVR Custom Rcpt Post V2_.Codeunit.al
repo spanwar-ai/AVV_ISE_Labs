@@ -58,6 +58,7 @@ codeunit 50123 "BVR Custom Rcpt Post V2"
         PostedRcptNo: Code[20];
         DimSetId: Integer;
         ExpAcc: Code[20];
+        BVRUserSetup: Record "User Setup";
         VendAccrAcc: Code[20];
         ApprMgt: Codeunit "BVR Cust Rcpt Appr Mgt";
     begin
@@ -69,6 +70,10 @@ codeunit 50123 "BVR Custom Rcpt Post V2"
         if (not SkipApprovalCheck) and PurchHdr."BVR Requires Approval" then
             if ApprMgt.HasOpenApprovalEntries(PurchHdr.RecordId) then
                 Error('Cannot post: Custom Receipt %1 is pending approval.', PurchHdr."No.");
+        // This posting books its accrual straight to the G/L, so it needs the same right as posting a
+        // general journal by hand. Checked before any number is drawn from a No. Series, so a refusal
+        // costs nothing.   //AAV.SP
+        BVRUserSetup.BVRCheckGLPostingAllowed();
         Setup.Get();
         Setup.TestField("Posted Receipt Nos.");
         ExpAcc := PurchHdr."BVR Expense Accrual Acc No.";

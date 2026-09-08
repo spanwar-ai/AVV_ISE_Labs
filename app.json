@@ -4,7 +4,7 @@
   "publisher": "ISE",
   "brief": "Custom purchase receiving and invoicing with accrual postings.",
   "description": "Adds a custom receive-accrue-invoice flow for purchase orders, an approval workflow, posting previews, and a bridge to ISE Receiving.",
-  "version": "1.0.0.3",
+  "version": "1.0.0.9",
   "target": "Cloud",
   "screenshots": [],
   "platform": "1.0.0.0",

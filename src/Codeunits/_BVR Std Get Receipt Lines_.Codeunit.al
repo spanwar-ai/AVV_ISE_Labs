@@ -94,12 +94,12 @@ codeunit 50127 "BVR Std Get Receipt Lines"
                     end;
 
                     InvLine.Validate(Quantity, RemQty);
-                    InvLine.Validate("Direct Unit Cost", RcptLine."Direct Unit Cost");
                     InvLine.Description := RcptLine.Description;
                     if RcptLine."Location Code" <> '' then
                         InvLine.Validate("Location Code", RcptLine."Location Code");
                     // Line-level accrual accounts: drive the posting redirect and keep the
                     // accrual detail visible per line.   //AAV
+                    InvLine.Validate("Direct Unit Cost", RcptLine."Direct Unit Cost");
                     InvLine."BVR Vendor Accrual Acc No." := VendAccrAcc;
                     InvLine."BVR Expense Accrual Acc No." := ExpAccrAcc;
                     // Link back to the source receipt line so invoiced qty can be tracked.

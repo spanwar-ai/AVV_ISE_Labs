@@ -1,5 +1,36 @@
 codeunit 50151 "BVR Gen Jnl GL Preview"
 {
+    // ------------------------------------------------------------------------------------------
+    // Posting rights for general journals. Lodged in this codeunit rather than one of its own: the
+    // rule itself is a single call on the "User Setup" extension that owns the flag, and AL will not
+    // take an [EventSubscriber] anywhere but a codeunit (AL0313). This is the app's general-journal
+    // codeunit, so it is the least surprising host.
+    //
+    // "Gen. Jnl.-Post Batch".OnBeforeCode is where EVERY journal template type arrives when a user
+    // posts a batch - General, Sales, Purchases, Cash Receipts, Payments, Fixed Asset - through Post
+    // and Post and Print alike. One subscriber covers "all types" without naming any of them, and
+    // goes on covering any type added later.
+    //
+    // Deliberately NOT "Gen. Jnl.-Post Line". Document posting builds its own journal lines and calls
+    // that codeunit directly - the receipt accruals in "BVR Std Rcpt Accrual" and the invoice postings
+    // in "BVR Custom Inv Post V2" among them. Gating there would stop anyone without the flag from
+    // posting a warehouse receipt or a purchase invoice at all, which is a different permission
+    // entirely and not what the flag is for.
+    //
+    // PreviewMode is skipped, and this codeunit is the reason it has to be: the expected-entries block
+    // below drives a real posting preview through codeunit 232, which reaches this same event. Gating
+    // preview would blank the General Journal - Test report for precisely the users who cannot post.
+    //   //AAV.SP
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Gen. Jnl.-Post Batch", 'OnBeforeCode', '', false, false)]
+    local procedure BVRCheckPostingRightsOnBeforePostBatch(var GenJournalLine: Record "Gen. Journal Line"; PreviewMode: Boolean; CommitIsSuppressed: Boolean)
+    var
+        BVRUserSetup: Record "User Setup";
+    begin
+        if PreviewMode then
+            exit;
+        BVRUserSetup.BVRCheckGLPostingAllowed();
+    end;
+
     // Returns the G/L entries a general journal WOULD post, for the "General Journal - Test" report.
     //
     // These are not derived or recalculated here - they come from BC's own posting preview, so VAT,

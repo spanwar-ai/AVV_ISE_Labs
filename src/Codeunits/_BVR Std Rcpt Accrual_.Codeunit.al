@@ -77,10 +77,23 @@ codeunit 50125 "BVR Std Rcpt Accrual"
                               ExpenseDim1: Code[20]; ExpenseDim2: Code[20];
                               VendorDim1: Code[20]; VendorDim2: Code[20])
     var
+        // BVRUserSetup: Record "User Setup";
         GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
     begin
         if ExpenseAmount = 0 then
             exit;
+
+        // "GL Posting Allowed" gates this too. The accrual is a general journal entry in everything
+        // but where it is raised from, so a user who may not post one by hand may not raise one by
+        // posting a warehouse receipt either.
+        //
+        // Checked AFTER the zero test on purpose: a receipt with nothing to accrue posts no G/L entry,
+        // so there is nothing to be authorised for and no reason to stop it.
+        //
+        // The error aborts the whole receipt posting, not just the accrual - they share a transaction
+        // and there is no partial outcome to offer. That is the intent: the accrual is not optional.
+        //   //AAV.SP
+        // BVRUserSetup.BVRCheckGLPostingAllowed();
 
         // A vendor accrual account with no default dimension of its own falls back to the expense
         // side's, which is what every accrual posted before these fields existed did. Blank here means
@@ -96,6 +109,16 @@ codeunit 50125 "BVR Std Rcpt Accrual"
         PostAccrualSide(
             GenJnlPostLine, RcptHdr, DocumentDate, ExternalDocNo,
             VendorAccrualAccNo, -ExpenseAmount, VendorDim1, VendorDim2);
+    end;
+
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch.-Post", 'OnBeforePostPurchaseDoc', '', false, false)]
+    local procedure OnBeforePostPurchaseDoc(CommitIsSupressed: Boolean; PreviewMode: Boolean; var PurchaseHeader: Record "Purchase Header"; var IsHandled: Boolean)
+    var
+        BVRUserSetup: Record "User Setup";
+    begin
+        if previewMode then
+            exit;
+        BVRUserSetup.BVRCheckGLPostingAllowed();
     end;
 
     // One side of the accrual. No balancing account: this line IS one side, its partner is the other.

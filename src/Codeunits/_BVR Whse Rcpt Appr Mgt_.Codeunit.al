@@ -51,6 +51,7 @@ codeunit 50130 "BVR Whse Rcpt Appr Mgt"
         // them would post to the wrong dimensions. TestField reports them under their configured
         // dimension names (CaptionClass '1,2,n'), e.g. "DEPARTMENT must have a value".   //AAV.SP
         WhseReceiptHeader.TestField("BVR Shortcut Dimension 1 Code");
+        CheckQtyToReceive(WhseReceiptHeader);
         //WhseReceiptHeader.TestField("BVR Shortcut Dimension 2 Code");
         //CheckWorkflowEnabled(WhseReceiptHeader);
 
@@ -229,6 +230,11 @@ codeunit 50130 "BVR Whse Rcpt Appr Mgt"
     begin
         if WhseReceiptHeader."BVR Receipt Status" = NewStatus then
             exit;
+        // Checked here as well as in SubmitForApproval, because this is the choke point every route
+        // to Released passes through - the workflow's Release Document response included, which
+        // reaches Released without going near SubmitForApproval.   //AAV.SP
+        if NewStatus = NewStatus::Released then
+            CheckQtyToReceive(WhseReceiptHeader);
         WhseReceiptHeader."BVR Receipt Status" := NewStatus;
         WhseReceiptHeader.Modify(true);
     end;
@@ -294,6 +300,23 @@ codeunit 50130 "BVR Whse Rcpt Appr Mgt"
         exit((WhseReceiptHeader."BVR Receipt Status" = WhseReceiptHeader."BVR Receipt Status"::"Sent to AP Team") and IsAPTeam());
     end;
 
+    // A receipt can carry lines and still receive nothing: "Get Source Documents" brings every
+    // outstanding line over, and the warehouse then zeroes the ones not physically arriving. Releasing
+    // that posts an empty receipt - no quantities, and an accrual of nothing - so it is stopped here
+    // rather than discovered at posting.
+    //
+    // Any non-zero quantity counts, not just a positive one, so a correcting line is not blocked by a
+    // rule meant to catch an untouched receipt.   //AAV.SP
+    local procedure CheckQtyToReceive(var WhseReceiptHeader: Record "Warehouse Receipt Header")
+    var
+        WhseReceiptLine: Record "Warehouse Receipt Line";
+    begin
+        WhseReceiptLine.SetRange("No.", WhseReceiptHeader."No.");
+        WhseReceiptLine.SetFilter("Qty. to Receive", '<>%1', 0);
+        if WhseReceiptLine.IsEmpty() then
+            Error(NoQtyToReceiveErr, WhseReceiptHeader."No.");
+    end;
+
     local procedure CheckHasLines(var WhseReceiptHeader: Record "Warehouse Receipt Header")
     var
         WhseReceiptLine: Record "Warehouse Receipt Line";
@@ -328,6 +351,7 @@ codeunit 50130 "BVR Whse Rcpt Appr Mgt"
     var
         APTeamOnlyErr: Label 'Only AP-team users can update the accrual accounts and submit the receipt for approval.';
         NoLinesErr: Label 'Warehouse Receipt %1 has no lines to receive. Get the source documents first.', Comment = '%1 = Warehouse Receipt No.';
+        NoQtyToReceiveErr: Label 'Warehouse Receipt %1 cannot be released. Enter a Qty. to Receive on at least one line.', Comment = '%1 = Warehouse Receipt No.';
         NoWorkflowEnabledErr: Label 'No approval workflow is enabled for Warehouse Receipts. Run "Enable Warehouse Receipt Approval" on Purchases & Payables Setup first.';
         NotificationFailedMsg: Label 'Warehouse Receipt %1 was sent to the AP team, but the email notification could NOT be sent. Please inform the AP team manually.\\Details: %2', Comment = '%1 = WR No., %2 = error details';
         AlreadyOpenMsg: Label 'Warehouse Receipt %1 is already open.', Comment = '%1 = Warehouse Receipt No.';

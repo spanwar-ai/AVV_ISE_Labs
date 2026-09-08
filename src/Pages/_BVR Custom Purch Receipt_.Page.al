@@ -3,8 +3,8 @@ page 50120 "BVR Custom Purch Receipt"
     PageType = Document;
     SourceTable = "Purchase Header";
     Caption = 'Custom Purchase Receipt';
-    ApplicationArea = All;
-    UsageCategory = Documents;
+    // ApplicationArea = All;
+    // UsageCategory = Documents;
     SourceTableView = where("Document Type" = const(Order), "BVR Receive PO" = const(true));
     PromotedActionCategoriesML = ENU = 'New,Process,Report,Approval';   //AAV.SP - adds the "Approval" ribbon tab (Category4)
 
@@ -386,21 +386,21 @@ page 50120 "BVR Custom Purch Receipt"
                     CurrPage.Update(false);                                                      //AAV.SP
                 end;                                                                             //AAV.SP
             }                                                                                    //AAV.SP
-            action("Approval Queue")
-            {
-                ApplicationArea = All;
-                Caption = 'Approval Queue';
-                Image = Approvals;
-                Promoted = true;
-                PromotedCategory = Process;
+            // action("Approval Queue")
+            // {
+            //     ApplicationArea = All;
+            //     Caption = 'Approval Queue';
+            //     Image = Approvals;
+            //     Promoted = true;
+            //     PromotedCategory = Process;
 
-                trigger OnAction()
-                var
-                    H: Record "Purchase Header";
-                begin
-                    Page.Run(Page::"BVR Receipt Approval Queue", H);
-                end;
-            }
+            //     trigger OnAction()
+            //     var
+            //         H: Record "Purchase Header";
+            //     begin
+            //         Page.Run(Page::"BVR Receipt Approval Queue", H);
+            //     end;
+            // }
             action("Print Receipt")
             {
                 ApplicationArea = All;

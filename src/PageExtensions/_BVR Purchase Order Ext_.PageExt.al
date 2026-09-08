@@ -8,7 +8,13 @@ pageextension 50111 "BVR Purchase Order Ext" extends "Purchase Order"
     //   * accrual accounts editable only while Status = Open.
     // Reopen clears the marker so the PO must be sent to AP again (handled in the codeunit).
     layout
+
     {
+        modify("Ship-to Contact")
+        {
+            ApplicationArea = All;
+            Editable = true;
+        }
         addlast(General)
         {
             field("BVR Blanket Order No."; Rec."BVR Blanket Order No.")   //AAV.SP

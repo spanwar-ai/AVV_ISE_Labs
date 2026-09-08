@@ -47,6 +47,7 @@ codeunit 50144 "BVR Custom Inv Post V2"
         GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line";
         NoSeriesMgt: Codeunit "No. Series";
         GLAccAmounts: Dictionary of [Code[20], Decimal];
+        BVRUserSetup: Record "User Setup";
         PayablesAcc: Code[20];
         VendAccrAcc: Code[20];
         ExpAcc: Code[20];
@@ -69,6 +70,10 @@ codeunit 50144 "BVR Custom Inv Post V2"
         InvHdr.TestField("BVR Expense Accrual Acc No.");
         if InvHdr."BVR Custom Inv Posted" then
             Error(AlreadyPostedErr, InvHdr."BVR Posted Inv No.");
+
+        // Builds and posts its own journal lines, so it needs the same right as posting a general
+        // journal by hand.   //AAV.SP
+        BVRUserSetup.BVRCheckGLPostingAllowed();
 
         VendAccrAcc := InvHdr."BVR Vendor Accrual Acc No.";
         ExpAcc := InvHdr."BVR Expense Accrual Acc No.";
