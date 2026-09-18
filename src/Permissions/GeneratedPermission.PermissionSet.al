@@ -90,5 +90,15 @@ permissionset 50100 GeneratedPermission
         codeunit "BVR Std PO Appr Mgt" = X,
         codeunit "BVR Std Get Receipt Lines" = X,
         codeunit "BVR Undo Receipt Accrual" = X,
-        codeunit "BVR Vendor Inv No Mgt" = X;
+        codeunit "BVR Vendor Inv No Mgt" = X,
+        // Bulk dimension correction on posted G/L entries. The G/L Entry write permission is the
+        // point of the feature, so it is granted here rather than left to the codeunit alone - a
+        // Permissions property on an object licenses the code, not the user.   //AAV.SP
+        tabledata "BVR GL Dim Correction" = RIMD,
+        table "BVR GL Dim Correction" = X,
+        page "BVR GL Dim Corrections" = X,
+        page "BVR GL Dim Corr Code" = X,
+        codeunit "BVR GL Dim Correction Mgt" = X,
+        tabledata "G/L Entry" = RM,
+        tabledata "Dim Correction Blocked Setup" = R;
 }

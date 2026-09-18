@@ -217,10 +217,10 @@ report 50255 "BVR Purch Rcpt Batch Report"
                     // The two global dimensions the accrual entry will carry into the G/L. Worked out
                     // the same way codeunit "BVR Std Rcpt Accrual" works them out, not read off the
                     // warehouse receipt directly - see BVRBuildAccrualDimensions.   //AAV.SP
-                    column(AccrualGlobalDim1; BVRGlobalDim1)
+                    column(AccrualGlobalDim1; BVRAccGlobalDim1)
                     {
                     }
-                    column(AccrualGlobalDim2; BVRGlobalDim2)
+                    column(AccrualGlobalDim2; BVRAccGlobalDim2)
                     {
                     }
                     column(AccrualDebit; BVRAccrualDebit)
@@ -469,7 +469,8 @@ report 50255 "BVR Purch Rcpt Batch Report"
         Clear(BVRAccrualDebit);
         Clear(BVRAccrualCredit);
         Clear(BVRAccrualNote);
-
+        Clear(BVRAccGlobalDim1);
+        Clear(BVRAccGlobalDim2);
         if not BVRAccrualIsBookable(WarehouseReceiptHeader) then begin
             if BVRAccrualAmount = 0 then
                 BVRAccrualNote := NoAccrualAmountTxt
@@ -483,11 +484,20 @@ report 50255 "BVR Purch Rcpt Batch Report"
                 begin
                     BVRAccrualAccount := WarehouseReceiptHeader."BVR Expense Accrual Acc No.";
                     BVRAccrualDebit := BVRAccrualAmount;
+                    BVRAccGlobalDim1 := WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code";
+                    BVRAccGlobalDim2 := WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code";
                 end;
             2:
                 begin
                     BVRAccrualAccount := WarehouseReceiptHeader."BVR Vendor Accrual Acc No.";
                     BVRAccrualCredit := BVRAccrualAmount;
+                    if warehouseReceiptHeader."BVR Vendor Accrual Dim 1 Code" <> '' then begin
+                        BVRAccGlobalDim1 := WarehouseReceiptHeader."BVR Vendor Accrual Dim 1 Code";
+                        BVRAccGlobalDim2 := WarehouseReceiptHeader."BVR Vendor Accrual Dim 2 Code";
+                    end else begin
+                        BVRAccGlobalDim1 := WarehouseReceiptHeader."BVR Shortcut Dimension 1 Code";
+                        BVRAccGlobalDim2 := WarehouseReceiptHeader."BVR Shortcut Dimension 2 Code";
+                    end;
                 end;
         end;
         BVRAccrualAccountName := BVRAccountName(BVRAccrualAccount);
@@ -515,6 +525,8 @@ report 50255 "BVR Purch Rcpt Batch Report"
         BVRAuditTrailCode: Code[20];
         BVRGlobalDim1: Text[30];
         BVRGlobalDim2: Text[30];
+        BVRAccGlobalDim1: Text[30];
+        BVRAccGlobalDim2: Text[30];
         BVRDim1Caption: Text[30];
         BVRDim2Caption: Text[30];
         BVRDocDateText: Text[30];

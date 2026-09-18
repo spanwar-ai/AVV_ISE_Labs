@@ -88,11 +88,19 @@ page 50170 "BVR Sales Invoice API"
                     Caption = 'Status';
                     Editable = false;
                 }
-                field(shortcutDimension1Code; Rec."Shortcut Dimension 1 Code")
+                // Page variables, NOT the Sales Header fields. The framework runs a field's OnValidate as
+                // it copies the JSON onto Rec, before OnInsertRecord has inserted anything - and Sales
+                // Header's ValidateShortcutDimCode ends with "if "No." <> '' then Modify()". With a
+                // number in the request, that Modify hits an invoice that does not exist yet and the POST
+                // fails with "The Sales Header does not exist". Held here instead, and applied in
+                // OnInsertRecord once the invoice is real. The other header fields have no such Modify.
+                // The lines are unaffected: Sales Line's version of the validation does not Modify.
+                //   //AAV.SP
+                field(shortcutDimension1Code; BVRShortcutDim1)
                 {
                     Caption = 'Shortcut Dimension 1 Code';
                 }
-                field(shortcutDimension2Code; Rec."Shortcut Dimension 2 Code")
+                field(shortcutDimension2Code; BVRShortcutDim2)
                 {
                     Caption = 'Shortcut Dimension 2 Code';
                 }
@@ -124,6 +132,14 @@ page 50170 "BVR Sales Invoice API"
     // So the values are taken off Rec, a clean header is inserted, and each one is then VALIDATED
     // back on in the order the table expects. Anything the caller did not send is left to Business
     // Central to default, which is why every assignment is guarded.   //AAV.SP
+    // Show the invoice's real dimensions on every read, and give a PATCH the current values to
+    // compare against, so one that leaves the dimensions out changes nothing.   //AAV.SP
+    trigger OnAfterGetRecord()
+    begin
+        BVRShortcutDim1 := Rec."Shortcut Dimension 1 Code";
+        BVRShortcutDim2 := Rec."Shortcut Dimension 2 Code";
+    end;
+
     trigger OnInsertRecord(BelowxRec: Boolean): Boolean
     var
         SalesHeader: Record "Sales Header";
@@ -145,8 +161,8 @@ page 50170 "BVR Sales Invoice API"
         YourRef := Rec."Your Reference";
         CurrencyCode := Rec."Currency Code";
         BatchNo := Rec."BVR Doc Batch No.";
-        ShortcutDim1 := Rec."Shortcut Dimension 1 Code";
-        ShortcutDim2 := Rec."Shortcut Dimension 2 Code";
+        ShortcutDim1 := BVRShortcutDim1;
+        ShortcutDim2 := BVRShortcutDim2;
         DocumentDate := Rec."Document Date";
         PostingDate := Rec."Posting Date";
         DueDate := Rec."Due Date";
@@ -200,6 +216,11 @@ page 50170 "BVR Sales Invoice API"
 
         SalesHeader.Modify(true);
 
+        // The response reports what the invoice ended up with - the customer's defaults where the
+        // caller sent blank.   //AAV.SP
+        BVRShortcutDim1 := SalesHeader."Shortcut Dimension 1 Code";
+        BVRShortcutDim2 := SalesHeader."Shortcut Dimension 2 Code";
+
         Rec := SalesHeader;
         Rec.SetRecFilter();
         // False: the record is already inserted above, so the framework must not insert it again.
@@ -227,18 +248,22 @@ page 50170 "BVR Sales Invoice API"
             SalesHeader.Validate("External Document No.", Rec."External Document No.");
         if Rec."Your Reference" <> SalesHeader."Your Reference" then
             SalesHeader.Validate("Your Reference", Rec."Your Reference");
-        if Rec."Shortcut Dimension 1 Code" <> SalesHeader."Shortcut Dimension 1 Code" then
-            SalesHeader.Validate("Shortcut Dimension 1 Code", Rec."Shortcut Dimension 1 Code");
-        if Rec."Shortcut Dimension 2 Code" <> SalesHeader."Shortcut Dimension 2 Code" then
-            SalesHeader.Validate("Shortcut Dimension 2 Code", Rec."Shortcut Dimension 2 Code");
+        if BVRShortcutDim1 <> SalesHeader."Shortcut Dimension 1 Code" then
+            SalesHeader.Validate("Shortcut Dimension 1 Code", BVRShortcutDim1);
+        if BVRShortcutDim2 <> SalesHeader."Shortcut Dimension 2 Code" then
+            SalesHeader.Validate("Shortcut Dimension 2 Code", BVRShortcutDim2);
         if Rec."BVR Doc Batch No." <> SalesHeader."BVR Doc Batch No." then
             SalesHeader.Validate("BVR Doc Batch No.", Rec."BVR Doc Batch No.");
 
         SalesHeader.Modify(true);
+        BVRShortcutDim1 := SalesHeader."Shortcut Dimension 1 Code";
+        BVRShortcutDim2 := SalesHeader."Shortcut Dimension 2 Code";
         Rec := SalesHeader;
         exit(false);
     end;
 
     var
+        BVRShortcutDim1: Code[20];
+        BVRShortcutDim2: Code[20];
         CustomerRequiredErr: Label 'customerNumber is required to create a sales invoice.';
 }
