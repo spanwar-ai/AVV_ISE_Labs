@@ -58,31 +58,43 @@ page 50171 "BVR Sales Invoice Line API"
                 {
                     Caption = 'Line Type';
                 }
-                field(lineObjectNumber; Rec."No.")
+                // Every writable field below is a page variable, NOT the Sales Line field, for the same
+                // reason as lineType. The framework runs each field's OnValidate as it copies the JSON
+                // onto Rec - before OnInsertRecord - and on a Sales Line those validations depend on
+                // things that are not there yet. "No." is looked up in a table chosen by Type, and Type
+                // is still blank at that point, so an account number was checked against STANDARD TEXT
+                // ("The Standard Text does not exist. Code='4010'", target lineObjectNumber) although
+                // the G/L account exists. Quantity runs TestStatusOpen and Unit Price has type-dependent
+                // checks, so they would have been next. Held here instead, and applied by OnInsertRecord
+                // in the order the table expects: Type, No., Description, Quantity, Unit Price, dates,
+                // dimensions.   //AAV.SP
+                field(lineObjectNumber; BVRObjectNo)
                 {
                     Caption = 'Line Object Number';
                 }
-                field(description; Rec.Description)
+                field(description; BVRDescription)
                 {
                     Caption = 'Description';
                 }
-                field(quantity; Rec.Quantity)
+                field(quantity; BVRQuantity)
                 {
                     Caption = 'Quantity';
+                    DecimalPlaces = 0 : 5;
                 }
-                field(unitPrice; Rec."Unit Price")
+                field(unitPrice; BVRUnitPrice)
                 {
                     Caption = 'Unit Price';
+                    AutoFormatType = 2;
                 }
-                field(shipmentDate; Rec."Shipment Date")
+                field(shipmentDate; BVRShipmentDate)
                 {
                     Caption = 'Shipment Date';
                 }
-                field(shortcutDimension1Code; Rec."Shortcut Dimension 1 Code")
+                field(shortcutDimension1Code; BVRShortcutDim1)
                 {
                     Caption = 'Shortcut Dimension 1 Code';
                 }
-                field(shortcutDimension2Code; Rec."Shortcut Dimension 2 Code")
+                field(shortcutDimension2Code; BVRShortcutDim2)
                 {
                     Caption = 'Shortcut Dimension 2 Code';
                 }
@@ -100,9 +112,11 @@ page 50171 "BVR Sales Invoice Line API"
         }
     }
 
+    // Loads the variables from the line on every read. A PATCH also starts from these, so a field it
+    // leaves out still holds the line's current value and is not changed.   //AAV.SP
     trigger OnAfterGetRecord()
     begin
-        BVRLineType := BVRToApiLineType(Rec.Type);
+        BVRLoadFromLine(Rec);
     end;
 
     // Same reasoning as the header: the framework writes the fields in no particular order and
@@ -126,13 +140,13 @@ page 50171 "BVR Sales Invoice Line API"
         if DocumentNo = '' then
             Error(DocumentRequiredErr);
 
-        ObjectNo := Rec."No.";
-        LineDescription := Rec.Description;
-        Qty := Rec.Quantity;
-        UnitPrice := Rec."Unit Price";
-        ShipmentDate := Rec."Shipment Date";
-        ShortcutDim1 := Rec."Shortcut Dimension 1 Code";
-        ShortcutDim2 := Rec."Shortcut Dimension 2 Code";
+        ObjectNo := BVRObjectNo;
+        LineDescription := BVRDescription;
+        Qty := BVRQuantity;
+        UnitPrice := BVRUnitPrice;
+        ShipmentDate := BVRShipmentDate;
+        ShortcutDim1 := BVRShortcutDim1;
+        ShortcutDim2 := BVRShortcutDim2;
 
         SalesLine.Init();
         SalesLine."Document Type" := SalesLine."Document Type"::Invoice;
@@ -167,6 +181,10 @@ page 50171 "BVR Sales Invoice Line API"
 
         SalesLine.Modify(true);
 
+        // The response reports the line as it was actually saved - the account's description, the
+        // invoice's dimensions - wherever the caller left something out.   //AAV.SP
+        BVRLoadFromLine(SalesLine);
+
         Rec := SalesLine;
         Rec.SetRecFilter();
         exit(false);
@@ -180,22 +198,23 @@ page 50171 "BVR Sales Invoice Line API"
 
         if BVRToSalesLineType(BVRLineType) <> SalesLine.Type then
             SalesLine.Validate(Type, BVRToSalesLineType(BVRLineType));
-        if Rec."No." <> SalesLine."No." then
-            SalesLine.Validate("No.", Rec."No.");
-        if Rec.Description <> SalesLine.Description then
-            SalesLine.Validate(Description, Rec.Description);
-        if Rec.Quantity <> SalesLine.Quantity then
-            SalesLine.Validate(Quantity, Rec.Quantity);
-        if Rec."Unit Price" <> SalesLine."Unit Price" then
-            SalesLine.Validate("Unit Price", Rec."Unit Price");
-        if Rec."Shipment Date" <> SalesLine."Shipment Date" then
-            SalesLine.Validate("Shipment Date", Rec."Shipment Date");
-        if Rec."Shortcut Dimension 1 Code" <> SalesLine."Shortcut Dimension 1 Code" then
-            SalesLine.Validate("Shortcut Dimension 1 Code", Rec."Shortcut Dimension 1 Code");
-        if Rec."Shortcut Dimension 2 Code" <> SalesLine."Shortcut Dimension 2 Code" then
-            SalesLine.Validate("Shortcut Dimension 2 Code", Rec."Shortcut Dimension 2 Code");
+        if BVRObjectNo <> SalesLine."No." then
+            SalesLine.Validate("No.", BVRObjectNo);
+        if BVRDescription <> SalesLine.Description then
+            SalesLine.Validate(Description, BVRDescription);
+        if BVRQuantity <> SalesLine.Quantity then
+            SalesLine.Validate(Quantity, BVRQuantity);
+        if BVRUnitPrice <> SalesLine."Unit Price" then
+            SalesLine.Validate("Unit Price", BVRUnitPrice);
+        if BVRShipmentDate <> SalesLine."Shipment Date" then
+            SalesLine.Validate("Shipment Date", BVRShipmentDate);
+        if BVRShortcutDim1 <> SalesLine."Shortcut Dimension 1 Code" then
+            SalesLine.Validate("Shortcut Dimension 1 Code", BVRShortcutDim1);
+        if BVRShortcutDim2 <> SalesLine."Shortcut Dimension 2 Code" then
+            SalesLine.Validate("Shortcut Dimension 2 Code", BVRShortcutDim2);
 
         SalesLine.Modify(true);
+        BVRLoadFromLine(SalesLine);
         Rec := SalesLine;
         exit(false);
     end;
@@ -208,6 +227,18 @@ page 50171 "BVR Sales Invoice Line API"
         if Rec."Document No." <> '' then
             exit(Rec."Document No.");
         exit(CopyStr(Rec.GetFilter("Document No."), 1, MaxStrLen(Rec."Document No.")));
+    end;
+
+    local procedure BVRLoadFromLine(SalesLine: Record "Sales Line")
+    begin
+        BVRLineType := BVRToApiLineType(SalesLine.Type);
+        BVRObjectNo := SalesLine."No.";
+        BVRDescription := SalesLine.Description;
+        BVRQuantity := SalesLine.Quantity;
+        BVRUnitPrice := SalesLine."Unit Price";
+        BVRShipmentDate := SalesLine."Shipment Date";
+        BVRShortcutDim1 := SalesLine."Shortcut Dimension 1 Code";
+        BVRShortcutDim2 := SalesLine."Shortcut Dimension 2 Code";
     end;
 
     local procedure BVRNextLineNo(DocumentNo: Code[20]): Integer
@@ -259,5 +290,12 @@ page 50171 "BVR Sales Invoice Line API"
 
     var
         BVRLineType: Enum "BVR API Sales Line Type";
+        BVRObjectNo: Code[20];
+        BVRDescription: Text[100];
+        BVRQuantity: Decimal;
+        BVRUnitPrice: Decimal;
+        BVRShipmentDate: Date;
+        BVRShortcutDim1: Code[20];
+        BVRShortcutDim2: Code[20];
         DocumentRequiredErr: Label 'The sales invoice line must be posted to an invoice - no document number was supplied.';
 }
